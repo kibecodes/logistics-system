@@ -1,6 +1,10 @@
 package driver
 
-import "github.com/google/uuid"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type Driver struct {
 	ID              uuid.UUID `db:"id" json:"id"`
@@ -9,5 +13,5 @@ type Driver struct {
 	VehicleInfo     string    `db:"vehicle_info" json:"vehicle_info"`
 	CurrentLocation string    `db:"current_location" json:"current_location"`
 	Available       bool      `db:"available" json:"available"`
-	CreatedAt       string    `db:"created_at" json:"created_at"`
+	CreatedAt       time.Time `db:"created_at" json:"created_at"`
 }

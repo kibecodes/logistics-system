@@ -1,0 +1,6 @@
+ALTER TABLE orders
+DROP CONSTRAINT IF EXISTS fk_orders_inventory;
+
+ALTER TABLE orders
+DROP COLUMN IF EXISTS inventory_id,
+DROP COLUMN IF EXISTS quantity;

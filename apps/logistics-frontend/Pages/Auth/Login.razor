@@ -1,9 +1,11 @@
 @page "/auth/login"
-@layout NullLayout
+@layout PublicLayout
 @using logistics_frontend.Models.User
 @using System.Text.Json
+@using System.Security.Claims
 @using logistics_frontend.Services.CustomAuthStateProvider
 @using System.Text.Json.Serialization
+@using Microsoft.AspNetCore.WebUtilities
 @inject NavigationManager Navigation
 @inject CustomAuthStateProvider AuthProvider
 @inject IJSRuntime JS
@@ -61,14 +63,14 @@
         var state = await AuthProvider.GetAuthenticationStateAsync();
         if (state.User.Identity?.IsAuthenticated == true)
         {
-            var role = state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            var role = state.User.FindFirst(ClaimTypes.Role)?.Value;
             hasNavigated = true;
             Navigation.NavigateTo($"/{role}/dashboard", forceLoad: true);
         }
 
         // Only parse returnUrl if not already redirected
         var uri = new Uri(Navigation.Uri);
-        var queryParams = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+        var queryParams = QueryHelpers.ParseQuery(uri.Query);
         if (queryParams.TryGetValue("returnUrl", out var url))
         {
             returnUrl = url;

@@ -16,14 +16,16 @@ const (
 )
 
 type User struct {
-	ID           uuid.UUID `db:"id" json:"id"`
-	FullName     string    `db:"full_name" json:"fullName"`
-	Email        string    `db:"email" json:"email"`
-	PasswordHash string    `db:"password_hash" json:"password"`
-	Role         Role      `db:"role" json:"role"`
-	Phone        string    `db:"phone" json:"phone"`
-	Slug         string    `db:"slug" json:"slug"` // adminSlug used in public route
-	CreatedAt    time.Time `db:"created_at" json:"created_at"`
+	ID                   uuid.UUID `db:"id" json:"id"`
+	FullName             string    `db:"full_name" json:"fullName"`
+	Email                string    `db:"email" json:"email"`
+	PasswordHash         string    `db:"password_hash" json:"-"`
+	Role                 Role      `db:"role" json:"role"`
+	Phone                string    `db:"phone" json:"phone"`
+	Slug                 string    `db:"slug" json:"slug"` // adminSlug used in public route
+	Must_change_password bool      `db:"must_change_password" json:"must_change_password"`
+	CreatedAt            time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt            time.Time `db:"updated_at" json:"updated_at"`
 }
 
 func (u *User) ComparePassword(password string) bool {

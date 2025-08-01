@@ -35,6 +35,11 @@ public class UserSessionService
             PropertyNameCaseInsensitive = true
         });
     }
+    public async Task<Guid?> GetUserIdAsync()
+    {
+        var user = await GetUserAsync();
+        return user?.ID;
+    }
 
     public async Task<string?> GetTokenAsync()
     {

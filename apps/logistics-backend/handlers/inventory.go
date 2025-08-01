@@ -32,26 +32,26 @@ func NewInventoryHandler(uc *usecase.UseCase) *InventoryHandler {
 // @Produce json
 // @Param inventory body inventory.CreateInventoryRequest true "Inventory input"
 // @Success 201 {object} inventory.Inventory
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Failure 400 {object} handlers.ErrorResponse "Invalid inventory ID or request body"
+// @Failure 500 {object} handlers.ErrorResponse "Internal server error"
 // @Router /inventories/create [post]
 func (h *InventoryHandler) CreateInventory(w http.ResponseWriter, r *http.Request) {
 	var req inventory.CreateInventoryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request")
+		writeJSONError(w, http.StatusBadRequest, "invalid request", nil)
 		return
 	}
 
 	i := req.ToInventory()
 	if err := h.UC.CreateInventory(r.Context(), i); err != nil {
 		log.Printf("create inventory failed: %v", err)
-		writeJSONError(w, http.StatusInternalServerError, "could not create inventory")
+		writeJSONError(w, http.StatusInternalServerError, "could not create inventory", err)
 		return
 	}
 
 	adminID, err := context.GetAdminIDFromContext(r.Context())
 	if err != nil {
-		writeJSONError(w, http.StatusUnauthorized, "unauthorized access")
+		writeJSONError(w, http.StatusUnauthorized, "unauthorized access", err)
 		return
 	}
 	req.AdminID = adminID
@@ -82,20 +82,20 @@ func (h *InventoryHandler) CreateInventory(w http.ResponseWriter, r *http.Reques
 // @Produce json
 // @Param id query string true "Inventory ID"
 // @Success 200 {object} inventory.Inventory
-// @Failure 400 {object} map[string]string
-// @Failure 404 {object} map[string]string
-// @Router /inventories/{id} [get]
+// @Failure 400 {object} handlers.ErrorResponse "Invalid inventory ID or request body"
+// @Failure 404 {object} handlers.ErrorResponse "Not found"
+// @Router /inventories/by-id [get]
 func (h *InventoryHandler) GetByInventoryID(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
+	idStr := r.URL.Query().Get("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "Invalid inventory ID")
+		writeJSONError(w, http.StatusBadRequest, "Invalid inventory ID", nil)
 		return
 	}
 
 	i, err := h.UC.GetByID(r.Context(), id)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "No inventory found")
+		writeJSONError(w, http.StatusNotFound, "No inventory found", err)
 		return
 	}
 
@@ -110,23 +110,23 @@ func (h *InventoryHandler) GetByInventoryID(w http.ResponseWriter, r *http.Reque
 // @Produce json
 // @Param name query string true "Inventory Name"
 // @Success 200 {object} inventory.Inventory
-// @Failure 400 {object} map[string]string
-// @Failure 404 {object} map[string]string
+// @Failure 400 {object} handlers.ErrorResponse "Invalid inventory ID or request body"
+// @Failure 404 {object} handlers.ErrorResponse "Not found"
 // @Router /inventories/by-name [get]
 func (h *InventoryHandler) GetByInventoryName(w http.ResponseWriter, r *http.Request) {
 	nameStr := r.URL.Query().Get("name")
 	if nameStr == "" {
-		writeJSONError(w, http.StatusBadRequest, "Name query parameter is required")
+		writeJSONError(w, http.StatusBadRequest, "Name query parameter is required", nil)
 		return
 	}
 
 	i, err := h.UC.GetByName(r.Context(), nameStr)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeJSONError(w, http.StatusNotFound, fmt.Sprintf("No inventory found with name '%s'", nameStr))
+			writeJSONError(w, http.StatusNotFound, fmt.Sprintf("No inventory found with name '%s'", nameStr), err)
 			return
 		}
-		writeJSONError(w, http.StatusInternalServerError, "Internal server error")
+		writeJSONError(w, http.StatusInternalServerError, "Internal server error", err)
 		return
 	}
 
@@ -142,7 +142,7 @@ func (h *InventoryHandler) GetByInventoryName(w http.ResponseWriter, r *http.Req
 // @Param limit query int false "Limit number of items"
 // @Param offset query int false "Offset for pagination"
 // @Success 200 {array} inventory.Inventory
-// @Failure 500 {object} map[string]string
+// @Failure 500 {object} handlers.ErrorResponse "Internal server error"
 // @Router /inventories/all_inventories [get]
 func (h *InventoryHandler) ListInventories(w http.ResponseWriter, r *http.Request) {
 	limitStr := r.URL.Query().Get("limit")
@@ -160,7 +160,7 @@ func (h *InventoryHandler) ListInventories(w http.ResponseWriter, r *http.Reques
 
 	inventories, err := h.UC.List(r.Context(), limit, offset)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "Could not fetch orders")
+		writeJSONError(w, http.StatusInternalServerError, "Could not fetch orders", err)
 		return
 	}
 
@@ -175,19 +175,19 @@ func (h *InventoryHandler) ListInventories(w http.ResponseWriter, r *http.Reques
 // @Produce json
 // @Param category query string true "Category Name"
 // @Success 200 {array} inventory.Inventory
-// @Failure 400 {object} map[string]string
-// @Failure 404 {object} map[string]string
+// @Failure 400 {object} handlers.ErrorResponse "Invalid Category"
+// @Failure 404 {object} handlers.ErrorResponse "Not found"
 // @Router /inventories/by-category [get]
 func (h *InventoryHandler) GetInventoryByCategory(w http.ResponseWriter, r *http.Request) {
 	category := r.URL.Query().Get("category")
 	if category == "" {
-		writeJSONError(w, http.StatusBadRequest, "Category query parameter is required")
+		writeJSONError(w, http.StatusBadRequest, "Category query parameter is required", nil)
 		return
 	}
 
 	inventories, err := h.UC.GetByCategory(r.Context(), category)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "No Inventories found for this category")
+		writeJSONError(w, http.StatusNotFound, "No Inventories found for this category", err)
 		return
 	}
 
@@ -201,12 +201,12 @@ func (h *InventoryHandler) GetInventoryByCategory(w http.ResponseWriter, r *http
 // @Tags inventories
 // @Produce json
 // @Success 200 {array} string
-// @Failure 500 {object} map[string]string
+// @Failure 500 {object} handlers.ErrorResponse "Internal server error"
 // @Router /inventories/categories [get]
 func (h *InventoryHandler) ListCategories(w http.ResponseWriter, r *http.Request) {
 	categories, err := h.UC.ListCategories(r.Context())
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "Failed to fetch categories")
+		writeJSONError(w, http.StatusInternalServerError, "Failed to fetch categories", err)
 		return
 	}
 
@@ -221,7 +221,7 @@ func (h *InventoryHandler) ListCategories(w http.ResponseWriter, r *http.Request
 // @Param adminSlug path string true "Admin Slug"
 // @Param productSlug path string true "Product Slug"
 // @Success 200 {object} inventory.Inventory
-// @Failure 404 {object} map[string]string
+// @Failure 404 {object} handlers.ErrorResponse "Not found"
 // @Router /public/store/{adminSlug}/product/{productSlug} [get]
 func (h *InventoryHandler) GetPublicProductPage(w http.ResponseWriter, r *http.Request) {
 	adminSlug := chi.URLParam(r, "adminSlug")
@@ -229,7 +229,7 @@ func (h *InventoryHandler) GetPublicProductPage(w http.ResponseWriter, r *http.R
 
 	product, err := h.UC.GetBySlugs(r.Context(), adminSlug, productSlug)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "Product not found")
+		writeJSONError(w, http.StatusNotFound, "Product not found", err)
 		return
 	}
 
@@ -243,17 +243,48 @@ func (h *InventoryHandler) GetPublicProductPage(w http.ResponseWriter, r *http.R
 // @Produce json
 // @Param adminSlug path string true "Admin Slug"
 // @Success 200 {object} inventory.StorePublicView
-// @Failure 404 {object} map[string]string
+// @Failure 404 {object} handlers.ErrorResponse "Not found"
 // @Router /public/store/{adminSlug} [get]
 func (h *InventoryHandler) GetAdminStorePage(w http.ResponseWriter, r *http.Request) {
 	adminSlug := chi.URLParam(r, "adminSlug")
 
 	storeView, err := h.UC.GetStorePublicView(r.Context(), adminSlug)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "Store not found")
+		writeJSONError(w, http.StatusNotFound, "Store not found", err)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(storeView)
+}
+
+// DeleteInventory godoc
+// @Summary Delete an inventory
+// @Description Permanently deletes an inventory by their ID
+// @Tags inventories
+// @Accept json
+// @Produce json
+// @Security JWT
+// @Param id path string true "Inventory ID"
+// @Success 200 {object} map[string]string "Inventory deleted"
+// @Failure 400 {object} handlers.ErrorResponse "Invalid inventory ID"
+// @Failure 500 {object} handlers.ErrorResponse "Internal server error"
+// @Router /inventories/{id} [delete]
+func (h *InventoryHandler) DeleteInventory(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	inventoryID, err := uuid.Parse(idStr)
+
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Invalid ID", nil)
+		return
+	}
+
+	if err := h.UC.DeleteByID(r.Context(), inventoryID); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "Failed to delete inventory", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Inventory deleted"})
 }

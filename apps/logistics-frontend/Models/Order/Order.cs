@@ -16,8 +16,9 @@ namespace logistics_frontend.Models.Order
     public class CreateOrderRequest 
     {
         [Required]
+        public Guid AdminID { get; set; }
+        [Required]
         public Guid CustomerID { get; set; }
-
         [Required]
         public string PickupLocation { get; set; } = string.Empty;
 

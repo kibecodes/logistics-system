@@ -19,12 +19,21 @@ func (uc *UseCase) CreateInventory(ctx context.Context, i *domain.Inventory) err
 	return uc.repo.Create(i)
 }
 
-func (uc *UseCase) GetByID(ctx context.Context, id uuid.UUID) ([]*domain.Inventory, error) {
-	return uc.repo.GetByID(id)
+func (uc *UseCase) GetByID(ctx context.Context, id uuid.UUID) (*domain.Inventory, error) {
+	items, err := uc.repo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return items, nil
 }
 
-func (uc *UseCase) GetByName(ctx context.Context, name string) ([]*domain.Inventory, error) {
+func (uc *UseCase) GetByName(ctx context.Context, name string) (*domain.Inventory, error) {
 	return uc.repo.GetByName(name)
+}
+
+func (uc *UseCase) UpdateInventory(ctx context.Context, inventoryId uuid.UUID, column string, value any) error {
+	return uc.repo.UpdateColumn(ctx, inventoryId, column, value)
 }
 
 func (uc *UseCase) List(ctx context.Context, limit, offset int) ([]*domain.Inventory, error) {
@@ -45,4 +54,8 @@ func (uc *UseCase) GetBySlugs(ctx context.Context, adminSlug, productSlug string
 
 func (uc *UseCase) GetStorePublicView(ctx context.Context, adminSlug string) (*domain.StorePublicView, error) {
 	return uc.repo.GetStoreView(adminSlug)
+}
+
+func (uc *UseCase) DeleteByID(ctx context.Context, id uuid.UUID) error {
+	return uc.repo.Delete(ctx, id)
 }

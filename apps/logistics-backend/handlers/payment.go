@@ -27,22 +27,22 @@ func NewPaymentHandler(ph *usecase.UseCase) *PaymentHandler {
 // @Produce  json
 // @Param user body payment.CreatePaymentRequest true "User Input"
 // @Success 201 {object} payment.Payment
-// @Failure 400 {string} string "Invalid request"
-// @Failure 500 {string} string "Failed to create payment"
+// @Failure 400 {string} handlers.ErrorResponse "Invalid request"
+// @Failure 500 {string} handlers.ErrorResponse "Failed to create payment"
 // @Router /payments/create [post]
 func (ph *PaymentHandler) CreatePayment(w http.ResponseWriter, r *http.Request) {
 	var req *payment.CreatePaymentRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "Invalid request")
+		writeJSONError(w, http.StatusBadRequest, "Invalid request", nil)
 		return
 	}
 
 	p := req.ToPayment()
 
 	if err := ph.PH.CreatePayment(r.Context(), p); err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "Could not create payment")
+		writeJSONError(w, http.StatusInternalServerError, "Could not create payment", err)
 		return
 	}
 
@@ -66,20 +66,20 @@ func (ph *PaymentHandler) CreatePayment(w http.ResponseWriter, r *http.Request) 
 // @Produce json
 // @Param id path string true "Payment ID"
 // @Success 200 {object} payment.Payment
-// @Failure 400 {string} string "Invalid ID"
-// @Failure 404 {string} string "Not found"
+// @Failure 400 {string} handlers.ErrorResponse "Invalid ID"
+// @Failure 404 {string} handlers.ErrorResponse "Not found"
 // @Router /payments/{id} [get]
 func (ph *PaymentHandler) GetPaymentByID(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	paymentID, err := uuid.Parse(idStr)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "Invalid payment ID")
+		writeJSONError(w, http.StatusBadRequest, "Invalid payment ID", nil)
 		return
 	}
 
 	p, err := ph.PH.GetPaymentByID(r.Context(), paymentID)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "No payment found")
+		writeJSONError(w, http.StatusNotFound, "No payment found", err)
 		return
 	}
 
@@ -95,20 +95,20 @@ func (ph *PaymentHandler) GetPaymentByID(w http.ResponseWriter, r *http.Request)
 // @Produce json
 // @Param order_id path string true "Order ID"
 // @Success 200 {object} []payment.Payment
-// @Failure 400 {string} string "Invalid Order ID"
-// @Failure 404 {string} string "Not found"
+// @Failure 400 {string} handlers.ErrorResponse "Invalid Order ID"
+// @Failure 404 {string} handlers.ErrorResponse "Not found"
 // @Router /payments/{order_id} [get]
 func (ph *PaymentHandler) GetPaymentByOrderID(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "order_id")
 	orderID, err := uuid.Parse(idStr)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "Invalid order ID")
+		writeJSONError(w, http.StatusBadRequest, "Invalid order ID", nil)
 		return
 	}
 
 	p, err := ph.PH.GetPaymentByOrderID(r.Context(), orderID)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "No payment found")
+		writeJSONError(w, http.StatusNotFound, "No payment found", err)
 		return
 	}
 
@@ -127,7 +127,7 @@ func (ph *PaymentHandler) GetPaymentByOrderID(w http.ResponseWriter, r *http.Req
 func (ph *PaymentHandler) ListPayments(w http.ResponseWriter, r *http.Request) {
 	payments, err := ph.PH.ListPayments(r.Context())
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "Could not fetch payments")
+		writeJSONError(w, http.StatusInternalServerError, "Could not fetch payments", err)
 		return
 	}
 

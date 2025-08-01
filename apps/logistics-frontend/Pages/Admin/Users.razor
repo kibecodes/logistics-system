@@ -41,10 +41,8 @@ else
 
 @code {
     private List<User>? users;
-
     protected override async Task OnInitializedAsync()
     {
-        Console.WriteLine("UserPage: OnInitializedAsync called.");
         users = await UserService.GetAllUsers();
     }
 }

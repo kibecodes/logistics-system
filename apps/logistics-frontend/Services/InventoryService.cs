@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
+using System.Text.Json;
+using logistics_frontend.Models.Errors;
 using logistics_frontend.Models.Inventory;
-using Microsoft.JSInterop;
 
 public class InventoryService
 {
@@ -10,41 +11,104 @@ public class InventoryService
         _http = httpClientFactory.CreateClient("AuthenticatedApi");
     }
 
-    public async Task AddInventory(CreateInventoryRequest inventory)
+    public async Task<ServiceResult<HttpResponseMessage>> AddInventory(CreateInventoryRequest inventory)
     {
-        var response = await _http.PostAsJsonAsync("inventories/create", inventory);
-        response.EnsureSuccessStatusCode();
+        try
+        {
+            var response = await _http.PostAsJsonAsync("inventories/create", inventory);
+            if (response.IsSuccessStatusCode)
+            {
+                return ServiceResult<HttpResponseMessage>.Ok(response);
+            }
+
+            var error = await ParseError(response);
+            return ServiceResult<HttpResponseMessage>.Fail(error);
+        }
+        catch (HttpRequestException ex)
+        {
+            return ServiceResult<HttpResponseMessage>.Fail($"Network error: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<HttpResponseMessage>.Fail($"Unexpected error: {ex.Message}");
+        }
     }
 
-    public async Task<List<Inventory>> GetInventoriesByID(Guid inventory_id)
+    public async Task<ServiceResult<Inventory>> GetInventoryByID(Guid inventory_id)
     {
-        var inventories = await _http.GetFromJsonAsync<List<Inventory>>($"inventories/by-id?id={inventory_id}");
-        return inventories ?? new List<Inventory>();
+        return await GetFromJsonSafe<Inventory>($"inventories/by-id/{inventory_id}");
     }
 
-    public async Task<List<Inventory>> GetInventoriesByName(string name)
+    public async Task<ServiceResult<List<Inventory>>> GetInventoriesByName(string name)
     {
         var encodedName = Uri.EscapeDataString(name);
-        var inventories = await _http.GetFromJsonAsync<List<Inventory>>($"inventories/by-name?name={encodedName}");
-        return inventories ?? new List<Inventory>();
+        return await GetFromJsonSafe<List<Inventory>>($"inventories/by-name?name={encodedName}");
     }
 
-    public async Task<List<Inventory>> GetAllInventories()
+    public async Task<ServiceResult<List<Inventory>>> GetAllInventories()
     {
-        var inventories = await _http.GetFromJsonAsync<List<Inventory>>("inventories/all_inventories");
-        return inventories ?? new List<Inventory>();
+        return await GetFromJsonSafe<List<Inventory>>("inventories/all_inventories");
     }
 
-    public async Task<List<Inventory>> GetInventoriesByCategory(string category)
+    public async Task<ServiceResult<List<Inventory>>> GetInventoriesByCategory(string category)
     {
         var encodedCategory = Uri.EscapeDataString(category);
-        var inventories = await _http.GetFromJsonAsync<List<Inventory>>($"inventories/by-category?category={encodedCategory}");
-        return inventories ?? new List<Inventory>();
+        return await GetFromJsonSafe<List<Inventory>>($"inventories/by-category?category={encodedCategory}");
     }
 
-    public async Task<List<string>> GetCategories()
+    public async Task<ServiceResult<List<string>>> GetCategories()
     {
-        var categories = await _http.GetFromJsonAsync<List<string>>("inventories/categories");
-        return categories ?? new List<string>();
+        return await GetFromJsonSafe<List<string>>("inventories/categories");
+    }
+
+    public async Task<string> DeleteInventory(Guid id)
+    {
+        var res = await _http.DeleteFromJsonAsync<string>($"inventories/{id}");
+        return res ?? string.Empty;
+    }
+
+
+    // Generic method for GET + JSON
+    private async Task<ServiceResult<T>> GetFromJsonSafe<T>(string url)
+    {
+        try
+        {
+            var response = await _http.GetAsync(url);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<T>();
+                return ServiceResult<T>.Ok(result ?? Activator.CreateInstance<T>());
+            }
+
+            var error = await ParseError(response);
+            return ServiceResult<T>.Fail(error);
+        }
+        catch (HttpRequestException ex)
+        {
+            return ServiceResult<T>.Fail($"Network error: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<T>.Fail($"Unexpected error: {ex.Message}");
+        }
+    }
+
+    private async Task<string> ParseError(HttpResponseMessage response)
+    {
+        try
+        {
+            var json = await response.Content.ReadAsStringAsync();
+            var error = JsonSerializer.Deserialize<ErrorResponse>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return error?.Detail ?? "Unknown error occurred.";
+        }
+        catch
+        {
+            return $"HTTP {(int)response.StatusCode} - {response.ReasonPhrase}";
+        }
     }
 }

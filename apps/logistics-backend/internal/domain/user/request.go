@@ -2,6 +2,8 @@ package user
 
 import (
 	generate "logistics-backend/internal/utils"
+
+	"github.com/google/uuid"
 )
 
 type CreateUserRequest struct {
@@ -13,14 +15,26 @@ type CreateUserRequest struct {
 	Slug     string `json:"slug" binding:"required"`
 }
 
+type UpdateDriverUserProfileRequest struct {
+	Phone string `json:"phone" binding:"required"`
+}
+
+type UpdateUserRequest struct {
+	Column string      `json:"column" binding:"required"`
+	Value  interface{} `json:"value" binding:"required"`
+}
+
 func (r *CreateUserRequest) ToUser() *User {
+	baseSlug := generate.GenerateSlug(r.FullName)
+	uniqueSuffix := uuid.New().String()[:8]
+
 	return &User{
 		FullName:     r.FullName,
 		Email:        r.Email,
 		PasswordHash: r.Password,
 		Role:         r.Role,
 		Phone:        r.Phone,
-		Slug:         generate.GenerateSlug(r.Slug),
+		Slug:         baseSlug + "-" + uniqueSuffix,
 	}
 }
 

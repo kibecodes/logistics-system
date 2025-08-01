@@ -27,22 +27,22 @@ func NewNotificationHandler(nh *usecase.UseCase) *NotificationHandler {
 // @Produce  json
 // @Param user body notification.CreateNotificationRequest true "User Input"
 // @Success 201 {object} notification.Notification
-// @Failure 400 {string} string "Invalid request"
-// @Failure 500 {string} string "Failed to create notification"
+// @Failure 400 {string} handlers.ErrorResponse "Invalid request"
+// @Failure 500 {string} handlers.ErrorResponse "Failed to create notification"
 // @Router /notifications/create [post]
 func (nh *NotificationHandler) CreateNotification(w http.ResponseWriter, r *http.Request) {
 	var req *notification.CreateNotificationRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "Invalid request")
+		writeJSONError(w, http.StatusBadRequest, "Invalid request", nil)
 		return
 	}
 
 	n := req.ToNotification()
 
 	if err := nh.NH.CreateNotification(r.Context(), n); err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "Could not create notification")
+		writeJSONError(w, http.StatusInternalServerError, "Could not create notification", err)
 		return
 	}
 
@@ -65,20 +65,20 @@ func (nh *NotificationHandler) CreateNotification(w http.ResponseWriter, r *http
 // @Produce  json
 // @Param id path string true "Notification ID"
 // @Success 200 {object} notification.Notification
-// @Failure 400 {string} string "Invalid ID"
-// @Failure 404 {string} string "Notification not found"
+// @Failure 400 {string} handlers.ErrorResponse "Invalid ID"
+// @Failure 404 {string} handlers.ErrorResponse "Notification not found"
 // @Router /notifications/{id} [get]
 func (nh *NotificationHandler) GetNotificationByID(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	notificationID, err := uuid.Parse(idStr)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "Invalid request")
+		writeJSONError(w, http.StatusBadRequest, "Invalid request", nil)
 		return
 	}
 
 	n, err := nh.NH.GetNotification(r.Context(), notificationID)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "No notification found")
+		writeJSONError(w, http.StatusNotFound, "No notification found", err)
 		return
 	}
 
@@ -97,7 +97,7 @@ func (nh *NotificationHandler) GetNotificationByID(w http.ResponseWriter, r *htt
 func (nh *NotificationHandler) ListNotification(w http.ResponseWriter, r *http.Request) {
 	n, err := nh.NH.ListNotification(r.Context())
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "Could not fetch notifications")
+		writeJSONError(w, http.StatusInternalServerError, "Could not fetch notifications", err)
 		return
 	}
 

@@ -1,6 +1,8 @@
 package postgres
 
 import (
+	"context"
+	"fmt"
 	"logistics-backend/internal/domain/user"
 
 	"github.com/google/uuid"
@@ -29,6 +31,58 @@ func (r *UserRepository) Create(u *user.User) error {
 	return stmt.Get(&u.ID, u)
 }
 
+func (r *UserRepository) UpdateProfile(ctx context.Context, id uuid.UUID, phone string) error {
+	query := `
+		UPDATE users
+		SET phone = $1, updated_at = NOW()
+		WHERE id = $2
+	`
+
+	res, err := r.db.ExecContext(ctx, query, phone, id)
+	if err != nil {
+		return err
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("no user found with id %s", id)
+	}
+	return nil
+}
+
+func (r *UserRepository) UpdateColum(ctx context.Context, userID uuid.UUID, column string, value any) error {
+	allowed := map[string]bool{
+		"full_name": true,
+		"email":     true,
+		"phone":     true,
+		"role":      true,
+	}
+
+	if !allowed[column] {
+		return fmt.Errorf("attempted to update disallowed column: %s", column)
+	}
+
+	query := fmt.Sprintf(`UPDATE users SET %s = $1, updated_at = NOW() WHERE id = $2`, column)
+	res, err := r.db.ExecContext(ctx, query, value, userID)
+	if err != nil {
+		return err
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("no user found with id %s", userID)
+	}
+	return nil
+}
+
 func (r *UserRepository) GetByID(id uuid.UUID) (*user.User, error) {
 	query := `SELECT id, full_name, email, password_hash, role, phone, slug FROM users WHERE id = $1`
 	var u user.User
@@ -48,4 +102,10 @@ func (r *UserRepository) List() ([]*user.User, error) {
 	var users []*user.User
 	err := r.db.Select(&users, query)
 	return users, err
+}
+
+func (r *UserRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	query := `DELETE FROM users WHERE id = $1`
+	_, err := r.db.ExecContext(ctx, query, id)
+	return err
 }

@@ -81,3 +81,17 @@ func GetAdminIDFromContext(ctx context.Context) (uuid.UUID, error) {
 
 	return uuid.Parse(idStr)
 }
+
+func GetDriverIDFromContext(ctx context.Context) (uuid.UUID, error) {
+	role, ok := ctx.Value(ContextRole).(string)
+	if !ok || role != "driver" {
+		return uuid.Nil, errors.New("not authorized as driver")
+	}
+
+	idStr, ok := ctx.Value(ContextUserID).(string)
+	if !ok {
+		return uuid.Nil, errors.New("missing user ID in context")
+	}
+
+	return uuid.Parse(idStr)
+}

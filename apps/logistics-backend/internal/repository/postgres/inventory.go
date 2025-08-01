@@ -2,7 +2,9 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
+	"fmt"
+
+	// "fmt"
 	"logistics-backend/internal/domain/inventory"
 
 	"github.com/google/uuid"
@@ -31,31 +33,61 @@ func (r *InventoryRepository) Create(i *inventory.Inventory) error {
 	return stmt.Get(&i.ID, i)
 }
 
-func (r *InventoryRepository) GetByID(InventoryID uuid.UUID) ([]*inventory.Inventory, error) {
-	query := `
-		SELECT id, admin_id, name, category, stock, price, images, unit, packaging, description, location, slug FROM inventories WHERE id = $1
-	`
-	var inventories []*inventory.Inventory
-	err := r.db.Select(&inventories, query, InventoryID)
-	return inventories, err
-}
-
-func (r *InventoryRepository) GetByName(InventoryName string) ([]*inventory.Inventory, error) {
+func (r *InventoryRepository) GetByID(InventoryID uuid.UUID) (*inventory.Inventory, error) {
 	query := `
 		SELECT id, admin_id, name, category, stock, price, images, unit, packaging, description, location, slug 
 		FROM inventories 
+		WHERE id = $1
+	`
+	var inventory inventory.Inventory
+	err := r.db.Get(&inventory, query, InventoryID)
+	return &inventory, err
+}
+
+func (r *InventoryRepository) GetByName(InventoryName string) (*inventory.Inventory, error) {
+	query := `
+		SELECT id, admin_id, name, category, stock, price, images, unit, packaging, description, location, slug
+		FROM inventories
 		WHERE name = $1
 	`
-	var inventories []*inventory.Inventory
-	err := r.db.Select(&inventories, query, InventoryName)
+	var inventory inventory.Inventory
+	err := r.db.Get(&inventory, query, InventoryName)
 	if err != nil {
 		return nil, err
 	}
-	if len(inventories) == 0 {
-		return nil, sql.ErrNoRows
+
+	return &inventory, nil
+}
+
+func (r *InventoryRepository) UpdateColumn(ctx context.Context, inventoryID uuid.UUID, column string, value any) error {
+	// Whitelist column names
+	allowed := map[string]bool{
+		"name":     true,
+		"stock":    true,
+		"price":    true,
+		"unit":     true,
+		"location": true,
 	}
 
-	return inventories, nil
+	if !allowed[column] {
+		return fmt.Errorf("attempted to update disallowed column: %s", column)
+	}
+
+	query := fmt.Sprintf(`UPDATE inventories SET %s = $1, updated_at = NOW() WHERE id = $2`, column)
+	res, err := r.db.ExecContext(ctx, query, value, inventoryID)
+	if err != nil {
+		return err
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("no order found with id %s", inventoryID)
+	}
+	return nil
 }
 
 func (r *InventoryRepository) GetByCategory(ctx context.Context, category string) ([]inventory.Inventory, error) {
@@ -160,3 +192,53 @@ func (r *InventoryRepository) GetStoreView(adminSlug string) (*inventory.StorePu
 
 	return &store, nil
 }
+
+func (r *InventoryRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	query := `DELETE FROM inventories WHERE id = $1`
+	_, err := r.db.ExecContext(ctx, query, id)
+	return err
+}
+
+// func GetColumnValues[T any](ctx context.Context, db *sqlx.DB, column string) ([]T, error) {
+// 	// Optional: whitelist
+// 	allowed := map[string]bool{
+// 		"stock":    true,
+// 		"category": true,
+// 		"location": true,
+// 	}
+
+// 	if !allowed[column] {
+// 		return nil, fmt.Errorf("invalid column: %s", column)
+// 	}
+
+// 	query := fmt.Sprintf(`SELECT %s FROM inventories`, column)
+
+// 	var values []T
+// 	err := db.SelectContext(ctx, &values, query)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	return values, nil
+// }
+
+// func UpdateColumnValues[T any](ctx context.Context, db *sqlx.DB, column string, newValue T, filterColumn string, filterValue any) error {
+// 	allowed := map[string]bool{
+// 		"stock":    true,
+// 		"category": true,
+// 		"location": true,
+// 		"name":     true,
+// 	}
+
+// 	if !allowed[column] {
+// 		return fmt.Errorf("invalid column to update: %s", column)
+// 	}
+// 	if !allowed[filterColumn] {
+// 		return fmt.Errorf("invalid filter column: %s", filterColumn)
+// 	}
+
+// 	query := fmt.Sprintf(`UPDATE inventories SET %s = $1 WHERE %s = $2`, column, filterColumn)
+
+// 	_, err := db.ExecContext(ctx, query, newValue, filterValue)
+// 	return err
+// }

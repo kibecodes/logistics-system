@@ -14,7 +14,7 @@
 
                     <div class="main-content">
                         <header class="topbar">
-                            <span>Hello, @Name</span>
+                            <span>Hello, @UserName</span>
                             <a @onclick="HandleLogout" class="logout-link">Logout</a>
                         </header>
 
@@ -109,9 +109,8 @@
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public bool RedirectToLogin { get; set; } = true;
-
     private string? Role;
-    private string? Name;
+    private string? UserName;
     private bool IsReady;
     private bool IsSidebarCollapsed;
     private void OnSidebarCollapseChanged(bool isCollapsed)
@@ -127,7 +126,7 @@
         if (user.Identity?.IsAuthenticated == true)
         {
             Role = user.FindFirst(ClaimTypes.Role)?.Value;
-            Name = user.FindFirst(ClaimTypes.Name)?.Value;
+            UserName = user.FindFirst(ClaimTypes.Name)?.Value;
         }
 
         IsReady = true;

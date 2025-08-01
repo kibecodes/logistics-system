@@ -1,6 +1,7 @@
 @page "/admin/inventories"
 @layout MainLayout
 @inject InventoryService InventoryService
+@using logistics_frontend.Models.Errors
 @inject NavigationManager Navigation
 
 <h3>Inventories</h3>
@@ -76,7 +77,11 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        Categories = await InventoryService.GetCategories();
+        ServiceResult<List<string>> result;
+
+        result = await InventoryService.GetCategories();
+        Categories = result.Data!;
+        
         await LoadAllInventories();
 
         var user = await SessionService.GetUserAsync();
@@ -101,7 +106,19 @@ else
     private async Task LoadAllInventories()
     {
         IsLoading = true;
-        InventoryContents = await InventoryService.GetAllInventories();
+        ServiceResult<List<Inventory>> result;
+
+        result = await InventoryService.GetAllInventories();
+        if (result.Success)
+        {
+            InventoryContents = result.Data!;
+        }
+        else
+        {
+            Console.WriteLine(result.ErrorMessage);
+            // toast error alert message
+        }
+
         IsLoading = false;
     } 
 
@@ -110,13 +127,25 @@ else
         SelectedCategory = e.Value?.ToString() ?? string.Empty;
         IsLoading = true;
 
+        ServiceResult<List<Inventory>> result;
+
         if (string.IsNullOrWhiteSpace(SelectedCategory))
         {
-            InventoryContents = await InventoryService.GetAllInventories();
+            result = await InventoryService.GetAllInventories();
         }
         else
         {
-            InventoryContents = await InventoryService.GetInventoriesByCategory(SelectedCategory);
+            result = await InventoryService.GetInventoriesByCategory(SelectedCategory);
+        }
+
+        if (result.Success)
+        {
+            InventoryContents = result.Data!;
+        }
+        else
+        {
+            Console.WriteLine(result.ErrorMessage);
+            // toast error alert message
         }
 
         IsLoading = false;

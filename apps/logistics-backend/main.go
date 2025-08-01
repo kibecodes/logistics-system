@@ -6,6 +6,9 @@ import (
 	"os"
 
 	"logistics-backend/handlers"
+	"logistics-backend/internal/adapter/driveradapter"
+	"logistics-backend/internal/adapter/inventoryadapter"
+	"logistics-backend/internal/adapter/orderadapter"
 	"logistics-backend/internal/repository/postgres"
 	"logistics-backend/internal/router"
 	deliveryUsecase "logistics-backend/internal/usecase/delivery"
@@ -60,14 +63,17 @@ func main() {
 	inventoryRepo := postgres.NewInventoryRespository(db)
 
 	// Set up usecase
-	uUsecase := userUsecase.NewUseCase(userRepo)
-	oUsecase := orderUsecase.NewUseCase(orderRepo)
 	dUsecase := driverUsecase.NewUseCase(driverRepo)
-	eUsecase := deliveryUsecase.NewUseCase(deliveryRepo)
+	driveradapter := driveradapter.DriverUseCaseAdapter{UseCase: dUsecase}
+	uUsecase := userUsecase.NewUseCase(userRepo, &driveradapter)
 	pUsecase := paymentUsecase.NewUseCase(paymentRepo)
 	fUsecase := feedbackUsecase.NewUseCase(feedbackRepo)
 	nUsecase := notificationUsecase.NewUseCase(notificationRepo)
 	iUsecase := inventoryUsecase.NewUseCase(inventoryRepo)
+	inventoryAdapter := inventoryadapter.InventoryUseCaseAdapter{UseCase: iUsecase}
+	oUsecase := orderUsecase.NewUseCase(orderRepo, &inventoryAdapter)
+	orderAdapter := orderadapter.OrderUseCaseAdapter{UseCase: oUsecase}
+	eUsecase := deliveryUsecase.NewUseCase(deliveryRepo, &orderAdapter)
 
 	// Set up Handlers
 	userHandler := handlers.NewUserHandler(uUsecase)

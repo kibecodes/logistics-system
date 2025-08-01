@@ -40,8 +40,7 @@
     private bool IsCollapsed = false;
     private string? Role;
     [Parameter] public EventCallback<bool> OnCollapseChanged { get; set; }
-    
-     protected override async Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync()
     {
         var state = await AuthProvider.GetAuthenticationStateAsync();
         var user = state.User;

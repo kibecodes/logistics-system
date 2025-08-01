@@ -72,16 +72,16 @@
     private decimal revenueThisWeek = 15700.50m;
     private List<string> notifications = new();
 
-    protected override async Task OnInitializedAsync()
+    @* protected override async Task OnInitializedAsync()
     {
         await LoadNotifications();
-    }
+    } *@
 
-    private async Task LoadNotifications()
+    @* private async Task LoadNotifications()
     {
         var allNotifications = await NotificationService.GetAllNotifications();
         notifications = allNotifications.Select(n => n.Message).ToList();
-    }
+    } *@
 
     private void CreateOrder() => Navigation.NavigateTo("/admin/createorder");
     private void AssignDriver() => Console.WriteLine("TODO: Assign driver modal");

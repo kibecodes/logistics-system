@@ -1,0 +1,2 @@
+ALTER TABLE deliveries
+DROP CONSTRAINT deliveries_driver_id_fkey;

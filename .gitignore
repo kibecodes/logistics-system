@@ -63,3 +63,10 @@ newman/
 *.html
 *.xml
 *.json
+
+# # Tailwind & Docker
+# .npm/
+# .cache/
+# *.log
+# tailwind/output.css  # if it exists
+# node_modules/

@@ -28,22 +28,22 @@ func NewFeedbackHandler(fh *usecase.UseCase) *FeedbackHandler {
 // @Produce  json
 // @Param user body feedback.CreateFeedbackRequest true "User Input"
 // @Success 201 {object} feedback.Feedback
-// @Failure 400 {string} string "Invalid request"
-// @Failure 500 {string} string "Failed to create feedback"
+// @Failure 400 {string} handlers.ErrorResponse "Invalid request"
+// @Failure 500 {string} handlers.ErrorResponse "Failed to create feedback"
 // @Router /feedbacks/create [post]
 func (fh *FeedbackHandler) CreateFeedback(w http.ResponseWriter, r *http.Request) {
 	var req *feedback.CreateFeedbackRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "Invalid request")
+		writeJSONError(w, http.StatusBadRequest, "Invalid request", nil)
 		return
 	}
 
 	f := req.ToFeedback()
 
 	if err := fh.FH.CreateFeedback(r.Context(), f); err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "Could not create feedback")
+		writeJSONError(w, http.StatusInternalServerError, "Could not create feedback", err)
 		return
 	}
 
@@ -67,21 +67,21 @@ func (fh *FeedbackHandler) CreateFeedback(w http.ResponseWriter, r *http.Request
 // @Produce  json
 // @Param id path string true "Feedback ID"
 // @Success 200 {object} feedback.Feedback
-// @Failure 400 {string} string "Invalid ID"
-// @Failure 404 {string} string "Feedback not found"
+// @Failure 400 {string} handlers.ErrorResponse "Invalid ID"
+// @Failure 404 {string} handlers.ErrorResponse "Feedback not found"
 // @Router /feedbacks/{id} [get]
 func (fh *FeedbackHandler) GetFeedbackByID(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	feedbackID, err := uuid.Parse(idStr)
 	fmt.Println("parsed id:", feedbackID)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "Invalid feedback ID")
+		writeJSONError(w, http.StatusBadRequest, "Invalid feedback ID", nil)
 		return
 	}
 
 	f, err := fh.FH.GetFeedbackByID(r.Context(), feedbackID)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "No feedback found")
+		writeJSONError(w, http.StatusNotFound, "No feedback found", err)
 		return
 	}
 
@@ -100,7 +100,7 @@ func (fh *FeedbackHandler) GetFeedbackByID(w http.ResponseWriter, r *http.Reques
 func (fh *FeedbackHandler) ListFeedback(w http.ResponseWriter, r *http.Request) {
 	feedbacks, err := fh.FH.ListFeedback(r.Context())
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "Could not fetch feedbacks")
+		writeJSONError(w, http.StatusInternalServerError, "Could not fetch feedbacks", err)
 		return
 	}
 

@@ -23,37 +23,37 @@ namespace logistics_frontend.Models.Inventory
 
     public class CreateInventoryRequest
     {
-        [Required]
+        [Required(ErrorMessage = "AdminID is required")]
         public Guid AdminID { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Name is required")]
         public string Name { get; set; } = string.Empty;
 
-        [Required]
+        // [Required(ErrorMessage = "Slug is required")]
         public string? Slug { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Category is required")]
         public string Category { get; set; } = string.Empty;
 
-        [Required]
+        [Required(ErrorMessage = "Stock is required")]
         public int Stock { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Price is required")]
         public float Price { get; set; }
 
-        [Required]
+        // [Required(ErrorMessage = "Images is required")]
         public string Images { get; set; } = string.Empty;
 
-        [Required]
+        [Required(ErrorMessage = "Unit is required")]
         public string Unit { get; set; } = string.Empty;
 
-        [Required]
+        [Required(ErrorMessage = "Packaging is required")]
         public string Packaging { get; set; } = string.Empty;
 
-        [Required]
+        [Required(ErrorMessage = "Description is required")]
         public string Description { get; set; } = string.Empty;
 
-        [Required]
+        [Required(ErrorMessage = "Location is required")]
         public string Location { get; set; } = string.Empty;
 
     }
