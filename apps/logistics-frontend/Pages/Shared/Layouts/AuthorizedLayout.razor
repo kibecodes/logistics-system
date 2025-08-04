@@ -1,6 +1,7 @@
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
 @using logistics_frontend.Services.CustomAuthStateProvider
+@using logistics_frontend.Pages.Shared.Components
 @inject AuthenticationStateProvider AuthProvider
 @inject NavigationManager Navigation
 
@@ -13,18 +14,11 @@
                     <SidebarComponent OnCollapseChanged="OnSidebarCollapseChanged"/>
 
                     <div class="main-content">
-                        <header class="topbar">
-                            <span>Hello, @UserName</span>
-                            <a @onclick="HandleLogout" class="logout-link">Logout</a>
-                        </header>
-
+                        <Navbar />
                         <main class="content">
                             @ChildContent
                         </main>
-
-                        <footer class="footer">
-                            <p>&copy; @DateTime.Now.Year Logistics System. All rights reserved.</p>
-                        </footer>
+                        <Footer />
                     </div>
                 </div>
             }

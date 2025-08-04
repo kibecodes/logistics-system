@@ -1,0 +1,187 @@
+@page "/auth/register-form"
+@layout PublicLayout
+@using System.ComponentModel.DataAnnotations
+@using System.Text.Json
+@using Microsoft.AspNetCore.WebUtilities
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject IHttpClientFactory HttpClientFactory
+
+<main class="flex justify-center items-center min-h-screen bg-white relative">
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
+        <div class="max-w-6xl mx-auto px-4 py-3">
+            <h1 class="font-bold text-2xl text-black">BizzGro</h1>
+        </div>
+    </nav>
+
+    <div class="w-full max-w-md mt-20 p-8 border border-gray-200 shadow-md rounded-md bg-white">
+        <h3 class="text-2xl font-bold mb-6 text-center">Sign up as @displayRole</h3>
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="bg-green-100 text-green-700 p-2 rounded mb-4">@successMessage</div>
+        }
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="bg-red-100 text-red-700 p-2 rounded mb-4">@errorMessage</div>
+        }
+
+        <!-- Social Buttons -->
+        <div class="flex flex-col gap-3 mb-4">
+            <button class="w-full flex items-center justify-center gap-2 border border-black text-black py-2 rounded hover:bg-gray-100 transition">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z" /></svg>
+                Continue with Apple
+            </button>
+
+            <button class="w-full flex items-center justify-center gap-2 bg-blue-500 text-white py-2 rounded hover:bg-blue-600 transition">
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" class="w-5 h-5">
+                Continue with Google
+            </button>
+        </div>
+
+        <div class="flex items-center my-4">
+            <div class="flex-grow h-px bg-gray-300"></div>
+            <span class="mx-2 text-sm text-gray-500">or</span>
+            <div class="flex-grow h-px bg-gray-300"></div>
+        </div>
+
+        <!-- Registration Form -->
+        <EditForm Model="@registerModel" OnValidSubmit="@HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <InputText @bind-Value="registerModel.FullName" placeholder="Full Name" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500" />
+                    <ValidationMessage For="@(() => registerModel.FullName)" />
+                </div>
+                <div>
+                    <InputText @bind-Value="registerModel.Phone" placeholder="Phone" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500" />
+                    <ValidationMessage For="@(() => registerModel.Phone)" />
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <InputText @bind-Value="registerModel.Email" placeholder="Email" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500" />
+                <ValidationMessage For="@(() => registerModel.Email)" />
+            </div>
+
+            <div class="mt-4">
+                <InputText @bind-Value="registerModel.Password" type="password" placeholder="Password (8+ characters)" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500" />
+                <ValidationMessage For="@(() => registerModel.Password)" />
+            </div>
+
+            <div class="mt-4">
+                <InputText @bind-Value="registerModel.ConfirmPassword" type="password" placeholder="Confirm Password" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500" />
+                <ValidationMessage For="@(() => registerModel.ConfirmPassword)" />
+            </div>
+
+            <div class="mt-4 flex items-center">
+                <input type="checkbox" checked class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500" disabled />
+                <label class="ml-2 text-sm text-gray-600">Send me helpful emails to find work and leads.</label>
+            </div>
+
+            <div class="mt-4 flex items-center">
+                <input type="checkbox" id="terms" class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500" required />
+                <label for="terms" class="ml-2 text-sm text-gray-600">
+                    I agree to the <a href="#" class="text-green-600 underline">Terms of Service</a> and <a href="#" class="text-green-600 underline">Privacy Policy</a>.
+                </label>
+            </div>
+
+            <button type="submit" class="w-full bg-green-600 text-white py-2 mt-6 rounded hover:bg-green-700 transition">
+                Create my account
+            </button>
+        </EditForm>
+
+        <p class="text-center text-sm text-gray-600 mt-6">
+            Already have an account?
+            <a href="/auth/login" class="text-green-600 hover:underline">Log In</a>
+        </p>
+    </div>
+
+    <footer class="absolute bottom-0 left-0 right-0 bg-black text-white text-sm text-center py-4">
+        © 2025 BizzGro • <a href="#" class="underline">Privacy Policy</a>
+    </footer>
+</main>
+
+@code {
+    private RegisterModel registerModel = new();
+    private string displayRole = string.Empty;
+    private string? successMessage { get; set; }
+    private string? errorMessage { get; set; }
+
+    private class ErrorResponse {
+        public string? Error { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthProvider.GetAuthenticationStateAsync();
+        if (state.User.Identity?.IsAuthenticated == true)
+        {
+            var role = state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            Navigation.NavigateTo($"/{role}/dashboard", forceLoad: true);
+        }
+
+        // Parse role from query param
+        var uri = new Uri(Navigation.Uri);
+        var queryParams = QueryHelpers.ParseQuery(uri.Query);
+        if (queryParams.TryGetValue("role", out var r))
+        {
+            var roleValue = r.ToString();
+
+            registerModel.Role = roleValue;
+            displayRole = roleValue switch
+            {
+                "admin" => "Business Owner",
+                "customer" => "Customer",
+                _ => r
+            };
+        }
+        else
+        {
+            displayRole = "User";
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("loadPageCss", "css/register.css");
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        var http = HttpClientFactory.CreateClient("AnonymousApi");
+        var response = await http.PostAsJsonAsync("public/create", registerModel);
+        if (response.IsSuccessStatusCode)
+        {
+            successMessage = "User created successfully! Redirecting to login ...";
+            
+            await Task.Delay(1500);
+            registerModel = new RegisterModel();
+
+            Navigation.NavigateTo("/auth/login", forceLoad: true);
+        }
+        else
+        {
+            var errorContent = await response.Content.ReadAsStringAsync();
+            try
+            {
+                var errorObj = JsonSerializer.Deserialize<ErrorResponse>(errorContent, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                errorMessage = errorObj?.Error ?? "An unknown error occurred.";
+            }
+            catch
+            {
+                errorMessage = "Failed to parse error response.";
+            }
+        }
+    }
+}

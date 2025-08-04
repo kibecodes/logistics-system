@@ -1,0 +1,32 @@
+@using Microsoft.AspNetCore.Components
+
+<a 
+    @attributes="AdditionalAttributes" 
+    href="@Href" 
+    class="@GetButtonClass()"
+>
+    @ChildContent
+</a>
+
+@code {
+    [Parameter] public string? Href { get; set; }
+    [Parameter] public string Color { get; set; } = "blue"; // or green, red, etc.
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string GetButtonClass()
+    {
+        var baseClass = "text-white font-semibold rounded px-4 py-2 transition";
+        var colorClass = Color switch
+        {
+            "green" => "bg-green-600 hover:bg-green-700",
+            "blue" => "bg-blue-600 hover:bg-blue-700",
+            "red" => "bg-red-600 hover:bg-red-700",
+            _ => "bg-gray-600 hover:bg-gray-700"
+        };
+
+        return $"{colorClass} {baseClass}";
+    }
+
+}

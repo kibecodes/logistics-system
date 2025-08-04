@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.toggle-btn-active {
+    @apply px-6 py-2 bg-green-600 text-white font-medium rounded-l-lg transition-all;
+}
+.toggle-btn-inactive {
+    @apply px-6 py-2 bg-white border border-green-600 text-green-600 font-medium rounded-r-lg transition-all;
+}
+
+.feature-card {
+    @apply w-full p-6 bg-white rounded-xl shadow hover:shadow-md transition-shadow text-center;
+}
+
+.feature-img {
+    @apply mx-auto w-36 mb-4;
+}
+
+.feature-title {
+    @apply font-semibold text-lg mb-2;
+}
+
+.feature-desc {
+    @apply text-sm text-gray-600;
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

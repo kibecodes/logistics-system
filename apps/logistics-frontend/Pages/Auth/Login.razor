@@ -3,6 +3,7 @@
 @using logistics_frontend.Models.User
 @using System.Text.Json
 @using System.Security.Claims
+@using System.ComponentModel.DataAnnotations
 @using logistics_frontend.Services.CustomAuthStateProvider
 @using System.Text.Json.Serialization
 @using Microsoft.AspNetCore.WebUtilities
@@ -11,90 +12,151 @@
 @inject IJSRuntime JS
 @inject IHttpClientFactory HttpClientFactory
 
-<div class="auth-wrapper">
-    <div class="auth-card">
-        <h3>🔐 Login</h3>
+<main id="login" class="flex justify-center items-center min-h-screen bg-white relative">
+    <!-- Top Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
+        <div class="max-w-6xl mx-auto px-4 py-3">
+            <h1 class="font-bold text-2xl text-black">BizzGro</h1>
+        </div>
+    </nav>
+
+    <!-- Login Card -->
+    <div id="card" class="w-full max-w-md mt-10 p-8 border border-gray-200 shadow-md rounded-md bg-white mb-10">
+        <h2 class="text-center text-2xl font-semibold text-black mb-6">Log in to BizzGro</h2>
 
         @if (!string.IsNullOrEmpty(errorMessage))
         {
-            <div class="alert alert-danger">@errorMessage</div>
+            <div class="mb-4 text-red-600 text-sm font-medium text-center">@errorMessage</div>
         }
 
-        <div class="mt-4">
-            <p>Enter your email and select a role:</p>
+        <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
 
-            <div class="mb-3">
-                <label>Email</label>
-                <InputText class="form-control" @bind-Value="email" />
+            <!-- Email / Username Input -->
+            <div class="mb-4">
+                <InputText @bind-Value="loginModel.Email" type="text" placeholder="Username or Email"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" />
+                <ValidationMessage For="@(() => loginModel.Email)" class="text-red-600 text-sm mt-1" />
             </div>
 
-            <div class="mb-3">
-                <label>Password</label>
-                <InputText type="password" class="form-control" @bind-Value="password" />
+            <!-- Password Input with eye toggle -->
+            <div class="mb-4 relative">
+                <InputText @bind-Value="loginModel.Password" 
+                        type="@(showPassword ? "text" : "password")" placeholder="Password"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" />
+                
+                <button type="button" 
+                        @onclick="TogglePasswordVisibility" 
+                        class="absolute right-3 top-2.5 text-gray-600 hover:text-gray-800 focus:outline-none" 
+                        tabindex="-1" aria-label="Toggle password visibility">
+                    @if (showPassword)
+                    {
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-5 0-9-3.582-9-8s4-8 9-8a9.969 9.969 0 013.375.625m3.875 3.25A9.978 9.978 0 0121 11c0 4.418-4 8-9 8a9.978 9.978 0 01-2.887-.43M3 3l18 18" />
+                        </svg>
+                    }
+                    else
+                    {
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                    }
+                </button>
+                <ValidationMessage For="@(() => loginModel.Password)" class="text-red-600 text-sm mt-1" />
             </div>
 
-            <div class="mb-1">
-                <button class="btn btn-primary" @onclick='() => LoginAsRole("admin")'>Login as Admin</button>
-                <button class="btn btn-secondary" @onclick='() => LoginAsRole("driver")'>Login as Driver</button>
-                <button class="btn btn-success" @onclick='() => LoginAsRole("customer")'>Login as Customer</button>
+            <!-- Role Selector -->
+            <div class="mb-6 flex justify-center items-center space-x-4">
+                <InputRadioGroup @bind-Value="loginModel.Role" class="flex gap-4">
+                    <label class="cursor-pointer">
+                        <InputRadio Value="loginModel.Role" class="hidden" />
+                        <div class="border rounded-lg px-6 py-3 text-center w-40
+                            @(loginModel.Role == "admin" 
+                                ? "border-green-600 border-2 bg-gray-50 shadow-md" 
+                                : "border-gray-300 hover:border-gray-600 cursor-pointer")">
+                            👩‍🌾 <div class="mt-1 font-medium">Admin</div>
+                        </div>
+                    </label>
+
+                    <label class="cursor-pointer">
+                        <InputRadio Value="loginModel.Role" class="hidden" />
+                        <div class="border rounded-lg px-6 py-3 text-center w-40
+                            @(loginModel.Role == "customer" 
+                                ? "border-green-600 border-2 bg-gray-50 shadow-md" 
+                                : "border-gray-300 hover:border-gray-600 cursor-pointer")">
+                            🛒 <div class="mt-1 font-medium">Customer</div>
+                        </div>
+                    </label>
+                </InputRadioGroup>
             </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition" 
+                    disabled="@string.IsNullOrEmpty(loginModel.Role)">
+                Continue
+            </button>
+        </EditForm>
+
+        <!-- OR Divider -->
+        <div class="flex items-center my-4">
+            <div class="flex-grow h-px bg-gray-300"></div>
+            <span class="mx-2 text-sm text-gray-500">or</span>
+            <div class="flex-grow h-px bg-gray-300"></div>
         </div>
 
-        <div class="mb-3">
-            <p>No Account ? Go to Register</p>
-            <div class="mb-2">
-                <button class="btn btn-danger" @onclick='() => Navigation.NavigateTo("/auth/register")'>Register</button>
-            </div>
-        </div>
+        <!-- Social Logins -->
+        <button class="w-full flex items-center justify-center gap-2 bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 mb-3 transition">
+            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" class="w-5 h-5">
+            Continue with Google
+        </button>
+
+        <button class="w-full flex items-center justify-center gap-2 border border-black text-black py-2 rounded-md hover:bg-gray-100 transition">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M19 13H5v-2h14v2z" />
+            </svg>
+            Continue with Apple
+        </button>
+
+        <!-- Signup Link -->
+        <p class="text-center text-sm text-gray-600 mt-6">
+            Don't have a BizzGro account?
+            <a href="/auth/register" class="text-green-600 hover:underline">Sign Up</a>
+        </p>
     </div>
-</div>
+
+    <!-- Footer -->
+    <footer class="absolute bottom-0 left-0 right-0 bg-black text-white text-sm text-center py-4">
+        © 2015 - 2025 BizzGro Inc. • <a href="#" class="underline">Privacy Policy</a>
+    </footer>
+</main>
+
 
 @code {
-    private string email = string.Empty;
-    private string password = string.Empty;
+    private bool showPassword = false;
+    private LoginModel loginModel = new();
     private string? errorMessage;
-    private string? returnUrl;
-    private bool hasNavigated;
-
-    protected override async Task OnInitializedAsync()
+    private void TogglePasswordVisibility()
     {
-        if (hasNavigated) return;
-
-        var state = await AuthProvider.GetAuthenticationStateAsync();
-        if (state.User.Identity?.IsAuthenticated == true)
-        {
-            var role = state.User.FindFirst(ClaimTypes.Role)?.Value;
-            hasNavigated = true;
-            Navigation.NavigateTo($"/{role}/dashboard", forceLoad: true);
-        }
-
-        // Only parse returnUrl if not already redirected
-        var uri = new Uri(Navigation.Uri);
-        var queryParams = QueryHelpers.ParseQuery(uri.Query);
-        if (queryParams.TryGetValue("returnUrl", out var url))
-        {
-            returnUrl = url;
-        }
+        showPassword = !showPassword;
     }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await JS.InvokeVoidAsync("loadPageCss", "css/login.css");
-        }
-    }
-
-    private async Task LoginAsRole(string role)
+    private async Task HandleLogin()
     {
         errorMessage = null;
+
+        if (string.IsNullOrEmpty(loginModel.Role))
+        {
+            errorMessage = "Please select a role.";
+            return;
+        }
 
         try
         {
             var loginPayload = new
             {
-                Email = email,
-                Password = password
+                Email = loginModel.Email,
+                Password = loginModel.Password
             };
 
             var content = new StringContent(
@@ -110,7 +172,7 @@
             if (response.IsSuccessStatusCode)
             {
                 var tokenResponse = JsonSerializer.Deserialize<LoginTokenResponse>(json);
-                    
+
                 if (tokenResponse is null || string.IsNullOrEmpty(tokenResponse.Token))
                 {
                     errorMessage = "Token not received from server.";
@@ -119,10 +181,10 @@
 
                 var claimsUser = AuthProvider.ParseToken(tokenResponse.Token);
 
-                if (claimsUser?.Role != role)
+                if (claimsUser?.Role != loginModel.Role)
                 {
-                    errorMessage = $"User exists but is not assigned to role '{role}'";
-                    return; 
+                    errorMessage = $"User exists but is not assigned to role '{loginModel.Role}'";
+                    return;
                 }
 
                 await AuthProvider.SignInAsync(tokenResponse.Token);
@@ -139,6 +201,18 @@
         {
             errorMessage = $"Error connecting to server: {ex.Message}";
         }
+    }
+
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "Email or username is required")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Password is required")]
+        public string Password { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Please select a role")]
+        public string Role { get; set; } = string.Empty;
     }
 
     private class ErrorResponse

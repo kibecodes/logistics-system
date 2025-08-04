@@ -1,0 +1,49 @@
+<section id="features" class="min-h-screen px-6 md:px-10 py-16 bg-gray-50">
+    <h2 class="text-3xl font-bold text-center mb-10">Features & Tools</h2>
+
+    <!-- Toggle Buttons -->
+    <div class="flex justify-center mb-8">
+        <button class='@GetBtnClass("admin")' @onclick='() => Toggle("admin")'>For Admins</button>
+        <button class='@GetBtnClass("customer")' @onclick='() => Toggle("customer")'>For Customers</button>
+    </div>
+
+    <!-- Admin Features -->
+    @if (selected == "admin")
+    {
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 justify-items-center fade-in transition-opacity duration-300">
+            @FeatureCard("Smart Inventory Management", "Upload products, track stock levels, and get alerts when inventory runs low.", "data-trend.svg")
+            @FeatureCard("Order & Delivery Tracking", "Process orders, assign drivers, and monitor delivery progress in real time.", "delivery-map.svg")
+            @FeatureCard("Business Analytics", "View reports and understand customer trends and product performance.", "analytics-dashboard.svg")
+        </div>
+    }
+    else
+    {
+        <!-- Customer Features -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 justify-items-center fade-in transition-opacity duration-300">
+            @FeatureCard("Seamless Ordering", "Browse stores, place orders easily, and get order confirmations instantly.", "ecommerce-ui.svg")
+            @FeatureCard("Real-Time Tracking", "Track your order from the warehouse to your doorstep, live.", "location-tracking.svg")
+            @FeatureCard("Customer Support", "Chat with sellers or drivers and access order history anytime.", "support-chat.svg")
+        </div>
+    }
+</section>
+
+@code {
+    private string selected = "admin";
+
+    private void Toggle(string type)
+    {
+        selected = type;
+    }
+    private string GetBtnClass(string type) =>
+        selected == type
+            ? "px-6 py-2 bg-green-600 text-white font-medium rounded-l-lg"
+            : "px-6 py-2 bg-white border border-green-600 text-green-600 font-medium";
+    RenderFragment FeatureCard(string title, string desc, string imgPath) => __builder =>
+    {
+        <div class="feature-card sm:w-[280px]">
+            <img src="@($"/Images/{imgPath}")" alt="@title" class="feature-img" />
+            <h4 class="feature-title">@title</h4>
+            <p class="feature-desc">@desc</p>
+        </div>;
+    };
+}

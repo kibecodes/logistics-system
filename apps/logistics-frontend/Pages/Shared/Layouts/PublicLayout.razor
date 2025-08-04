@@ -1,44 +1,6 @@
 @inherits LayoutComponentBase
-
-<div class="public-layout">
-    <header>
-        <h1 class="logo">📦 Logistics</h1>
-        <nav>
-            <a href="/">BizzGro</a> |
-            <a href="/features">Features</a> |
-            <a href="/about">About</a> |
-            <a href="/auth/login">Login</a> |
-            <a href="/auth/register">Register</a>
-        </nav>
-    </header>
-
-    <main class="public-main">
-        @Body
-    </main>
-
-    <footer>
-        <p>&copy; @DateTime.Now.Year BizzGro. All rights reserved.</p>
-    </footer>
+@using logistics_frontend.Pages.Shared
+    
+<div class="flex flex-col min-h-screen">
+    @Body
 </div>
-
-<style>
-    .public-layout {
-        display: flex;
-        flex-direction: column;
-        min-height: 100vh;
-        text-align: center;
-    }
-    header {
-        background: #004080;
-        color: white;
-        padding: 1rem;
-    }
-    .public-main {
-        flex-grow: 1;
-        padding: 2rem;
-    }
-    footer {
-        background: #f5f5f5;
-        padding: 1rem;
-    }
-</style>

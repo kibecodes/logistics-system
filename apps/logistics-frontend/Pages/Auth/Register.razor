@@ -1,116 +1,112 @@
 @page "/auth/register"
 @layout PublicLayout
-@using System.ComponentModel.DataAnnotations
-@using System.Text.Json
-@inject AuthenticationStateProvider AuthProvider
 @inject NavigationManager Navigation
-@inject IJSRuntime JS
-@inject IHttpClientFactory HttpClientFactory
 
-<div class="auth-wrapper">
-    <div class="auth-card">
-        <h3>📝 Register</h3>
+<main class="flex flex-col items-center justify-center min-h-screen bg-white px-4">
+    <!-- Top Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
+        <div class="max-w-6xl mx-auto px-4 py-3">
+            <h1 class="font-bold text-2xl text-black">BizzGro</h1>
+        </div>
+    </nav>
 
-        @if (!string.IsNullOrEmpty(successMessage))
-        {
-            <div class="alert alert-success">@successMessage</div>
-        }
+    <h2 class="text-3xl font-semibold mb-10 text-center">Join as a Business Owner or Customer</h2>
 
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="alert alert-danger">@errorMessage</div>
-        }
+    <!-- Role Selection Cards -->
+    <div class="flex flex-col sm:flex-row gap-6 sm:gap-10 justify-center">
 
-        <EditForm Model="@registerModel" OnValidSubmit="@HandleValidSubmit">
-            <DataAnnotationsValidator />
-            <ValidationSummary />
+        <!-- Business Owner Card -->
+        <div @onclick="@(() => SelectRole("producer"))"
+            class="relative cursor-pointer border rounded-lg px-8 py-6 text-center w-72 transition duration-200 ease-in-out
+                    @(selectedRole == "producer" 
+                        ? "border-green-600 border-4 bg-gray-50 shadow-md" 
+                        : "hover:shadow-md hover:border-gray-600 border-gray-300")">
+            
+            @if (selectedRole == "producer")
+            {
+                <div class="absolute top-3 right-3 text-green-600">
+                    <!-- Lucide check-circle icon SVG -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2l4 -4M12 22a10 10 0 1 1 0 -20a10 10 0 0 1 0 20z" />
+                    </svg>
+                </div>
+            }
 
-            <div class="mb-3">
-                <label>Full Name</label>
-                <InputText @bind-Value="registerModel.FullName" class="form-control" />
-                <ValidationMessage For="@(() => registerModel.FullName)" />
+            <div class="text-5xl mb-3">👩‍🌾</div>
+            <div class="text-lg font-medium text-black">I'm a Business Owner</div>
+            <div class="text-sm text-gray-500 mt-1">Hiring or listing products</div>
+        </div>
 
-                <label>Email</label>
-                <InputText @bind-Value="registerModel.Email" class="form-control" />
-                <ValidationMessage For="@(() => registerModel.Email)" />
+        <!-- Customer Card -->
+        <div @onclick="@(() => SelectRole("customer"))"
+            class="relative cursor-pointer border rounded-lg px-8 py-6 text-center w-72 transition duration-200 ease-in-out
+                    @(selectedRole == "customer" 
+                        ? "border-green-600 border-4 bg-gray-50 shadow-md" 
+                        : "hover:shadow-md hover:border-gray-600 border-gray-300")">
 
-                <label>Password</label>
-                <InputText @bind-Value="registerModel.Password" type="password" class="form-control" />
-                <ValidationMessage For="@(() => registerModel.Password)" />
+            @if (selectedRole == "customer")
+            {
+                <div class="absolute top-3 right-3 text-green-600">
+                    <!-- Lucide check-circle icon SVG -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2l4 -4M12 22a10 10 0 1 1 0 -20a10 10 0 0 1 0 20z" />
+                    </svg>
+                </div>
+            }
 
-                <label>Confirm Password</label>
-                <InputText @bind-Value="registerModel.ConfirmPassword" type="password" class="form-control" />
-                <ValidationMessage For="@(() => registerModel.ConfirmPassword)" />
-
-                <label>Role</label>
-                <InputText @bind-Value="registerModel.Role" class="form-control" />
-                <ValidationMessage For="@(() => registerModel.Role)" />
-
-                <label>Phone</label>
-                <InputText @bind-Value="registerModel.Phone" class="form-control" />
-                <ValidationMessage For="@(() => registerModel.Phone)" />
-            </div>
-
-            <button class="btn btn-primary">Register</button>
-        </EditForm>
+                <div class="text-5xl mb-3">🛒</div>
+                <div class="text-lg font-medium text-black">I'm a Customer</div>
+                <div class="text-sm text-gray-500 mt-1">Looking to buy or browse</div>
+        </div>
     </div>
-</div>
+
+
+    <!-- Continue Button -->
+    <div class="text-center mt-10">
+        <button disabled="@string.IsNullOrEmpty(selectedRole)"
+                class="px-8 py-3 rounded font-semibold transition-colors
+                       @(string.IsNullOrEmpty(selectedRole) 
+                         ? "bg-gray-300 text-gray-600 cursor-not-allowed" 
+                         : "bg-green-600 text-white hover:bg-green-700")"
+                @onclick="ProceedToRegister">
+            @GetButtonText()
+        </button>
+    </div>
+
+    <!-- Login Prompt -->
+    <p class="text-center mt-6 text-sm text-gray-600">
+        Already have an account?
+        <a href="/auth/login" class="text-green-600 font-medium hover:underline">Log In</a>
+    </p>
+</main>
+
 
 @code {
-    private RegisterModel registerModel = new();
-    private string? successMessage { get; set; }
-    private string? errorMessage { get; set; }
+    private string selectedRole = string.Empty;
 
-    private class ErrorResponse {
-        public string? Error { get; set; }
+    private void SelectRole(string role)
+    {
+        selectedRole = role;
     }
 
-    protected override async Task OnInitializedAsync()
+    private string GetButtonText()
     {
-        var state = await AuthProvider.GetAuthenticationStateAsync();
-        if (state.User.Identity?.IsAuthenticated == true)
+        if (string.IsNullOrEmpty(selectedRole))
+            return "Select a role to proceed";
+
+        return selectedRole switch
         {
-            var role = state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
-            Navigation.NavigateTo($"/{role}/dashboard", forceLoad: true);
-        }
+            "producer" => "Register as Business Owner",
+            "customer" => "Register as Customer",
+            _ => "Register"
+        };
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private void ProceedToRegister()
     {
-        if (firstRender)
+        if (!string.IsNullOrEmpty(selectedRole))
         {
-            await JS.InvokeVoidAsync("loadPageCss", "css/register.css");
-        }
-    }
-
-    private async Task HandleValidSubmit()
-    {
-        var http = HttpClientFactory.CreateClient("AnonymousApi");
-        var response = await http.PostAsJsonAsync("public/create", registerModel);
-        if (response.IsSuccessStatusCode)
-        {
-            successMessage = "User created successfully! Redirecting to login ...";
-            
-            await Task.Delay(1500);
-            registerModel = new RegisterModel(); 
-
-            Navigation.NavigateTo("/auth/login", forceLoad: true);
-        }
-        else
-        {
-            var errorContent = await response.Content.ReadAsStringAsync();
-            try
-            {
-                var errorObj = JsonSerializer.Deserialize<ErrorResponse>(errorContent, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
-                errorMessage = errorObj?.Error ?? "An unknown error occured.";
-            }
-            catch
-            {
-                errorMessage = "Failed to parse error response.";
-            }
+            Navigation.NavigateTo($"/auth/register-form?role={selectedRole}");
         }
     }
 }
