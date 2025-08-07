@@ -64,7 +64,7 @@ newman/
 *.xml
 *.json
 
-# Tailwind & Docker
+# Tailwind, Docker & node_modules
 .npm/
 .cache/
 *.log
