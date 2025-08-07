@@ -477,7 +477,7 @@ definitions:
       updated_at:
         type: string
     type: object
-host: 192.168.100.18:8000
+host: localhost:8000
 info:
   contact: {}
   description: This is the API for logistics operations.

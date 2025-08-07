@@ -290,6 +290,7 @@ func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		"sub":   u.ID.String(), // subject
 		"email": u.Email,
 		"role":  u.Role,                                // custom claim
+		"name": u.FullName,
 		"exp":   time.Now().Add(time.Hour * 24).Unix(), // expires in 24h
 	}
 
