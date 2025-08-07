@@ -1,34 +1,38 @@
-@using System.Security.Claims
-@using Microsoft.AspNetCore.Components.Authorization
-@using logistics_frontend.Services.CustomAuthStateProvider
 @using logistics_frontend.Pages.Shared.Components
-@inject AuthenticationStateProvider AuthProvider
+@using logistics_frontend.Services.CustomAuthStateProvider
+@using System.Security.Claims
 @inject NavigationManager Navigation
+@inject CustomAuthStateProvider AuthProvider
 
 <CascadingAuthenticationState>
     <AuthorizeView>
         <Authorized>
             @if (IsReady)
             {
-                <div class="layout-container @(IsSidebarCollapsed ? "sidebar-collapsed" : "")">
-                    <SidebarComponent OnCollapseChanged="OnSidebarCollapseChanged"/>
+                <div class="flex min-h-screen bg-gray-100 pt-16">
+                    <!-- Sidebar -->
+                    <SidebarComponent 
+                        OnCollapseChanged="OnSidebarCollapseChanged" 
+                    />
 
-                    <div class="main-content">
-                        <Navbar />
-                        <main class="content">
+                    <!-- Main Content Area -->
+                    <div class="flex flex-col flex-1 min-h-screen">
+                        <!-- Navbar -->
+                        <Navbar UserName="@UserName"/>
+
+                        <!-- Main Content -->
+                        <main class="flex-1 overflow-auto p-6 max-w-7xl mx-auto w-full">
                             @ChildContent
                         </main>
-                        <Footer />
                     </div>
                 </div>
             }
             else
             {
-                <p>Loading...</p>
+                <p class="p-6 text-center text-gray-600">Loading...</p>
             }
         </Authorized>
         <NotAuthorized>
-            @*prevent the layout from triggering another redirect if you're already on the /auth/login page *@
             @if (RedirectToLogin && IsReady && !Navigation.Uri.Contains("/auth/login"))
             {
                 Navigation.NavigateTo("/auth/login", forceLoad: true);
@@ -37,76 +41,13 @@
     </AuthorizeView>
 </CascadingAuthenticationState>
 
-<style>
-    .layout-container {
-        display: grid;
-        grid-template-columns: var(--sidebar-width, 250px) 1fr;
-        grid-template-rows: auto 1fr auto;
-        min-height: 100vh;
-        transition: grid-template-columns 0.3s ease;
-        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    }
-
-    .layout-container.sidebar-collapsed {
-        --sidebar-width: 60px;
-    }
-
-    .sidebar {
-        grid-row: 1 / span 3;
-        background-color: #f8f9fa;
-        padding: 1rem;
-        border-right: 1px solid #ddd;
-    }
-
-    .main-content {
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-        background-color: #f4f6f8;
-    }
-
-    .topbar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background-color: #ffffff;
-        padding: 1rem 2rem;
-        border-bottom: 1px solid #ddd;
-        font-weight: bold;
-    }
-
-    .content {
-        flex: 1;
-        padding: 2rem;
-        overflow: auto;
-    }
-
-    .footer {
-        text-align: center;
-        padding: 1rem;
-        background-color: #ffffff;
-        border-top: 1px solid #ddd;
-    }
-
-    .logout-link {
-        cursor: pointer;
-        color: #dc3545;
-        text-decoration: none;
-        margin-left: 1rem;
-    }
-
-    .logout-link:hover {
-        text-decoration: underline;
-    }
-</style>
-
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public bool RedirectToLogin { get; set; } = true;
-    private string? Role;
-    private string? UserName;
     private bool IsReady;
     private bool IsSidebarCollapsed;
+    private string? UserName;
+
     private void OnSidebarCollapseChanged(bool isCollapsed)
     {
         IsSidebarCollapsed = isCollapsed;
@@ -114,24 +55,38 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var state = await AuthProvider.GetAuthenticationStateAsync();
-        var user = state.User;
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
 
         if (user.Identity?.IsAuthenticated == true)
         {
-            Role = user.FindFirst(ClaimTypes.Role)?.Value;
-            UserName = user.FindFirst(ClaimTypes.Name)?.Value;
+            // Try multiple claim types as fallbacks
+            var nameClaim = user.FindFirst(ClaimTypes.Name)
+                        ?? user.FindFirst("name")  // JWT/common alternative
+                        ?? user.FindFirst(ClaimTypes.Email)
+                        ?? user.FindFirst(ClaimTypes.NameIdentifier); // e.g., username or ID
+
+            var displayName = nameClaim?.Value?.Trim();
+
+            // Extract first name, or fallback to a default
+            if (!string.IsNullOrEmpty(displayName))
+            {
+                var firstName = displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                                        .FirstOrDefault()?
+                                        .Trim();
+
+                UserName = !string.IsNullOrEmpty(firstName) ? firstName : "User";
+            }
+            else
+            {
+                UserName = "User"; // ultimate fallback
+            }
         }
-
-        IsReady = true;
-        StateHasChanged();
-    }
-
-    private async Task HandleLogout()
-    {
-        if (AuthProvider is CustomAuthStateProvider customAuth)
+        else
         {
-            await customAuth.SignOutAsync();
+            UserName = "Guest"; // optional: handle unauthenticated case
         }
+
+        IsReady = true; // Now trigger render — Navbar will receive non-null UserName
     }
 }

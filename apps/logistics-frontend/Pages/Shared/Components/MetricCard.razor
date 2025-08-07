@@ -1,0 +1,33 @@
+@using Microsoft.AspNetCore.Components
+
+<div class="p-4 rounded-lg shadow-sm border bg-white flex items-center gap-4 
+            @(HighlightClass)">
+    <!-- Icon -->
+    @if (!string.IsNullOrWhiteSpace(Icon))
+    {
+        <div class="p-2 rounded-full bg-gray-100 text-orange-500">
+            <i class="fas fa-@Icon text-lg"></i>
+        </div>
+    }
+
+    <!-- Content -->
+    <div>
+        <p class="text-sm text-gray-500">@Title</p>
+        <p class="text-xl font-semibold text-gray-800">@Value</p>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public string Icon { get; set; } = ""; // e.g., "truck", "box"
+    [Parameter] public string Highlight { get; set; } = ""; // e.g., "danger", "success"
+
+    private string HighlightClass => Highlight switch
+    {
+        "danger" => "border-red-200 bg-red-50",
+        "success" => "border-green-200 bg-green-50",
+        "warning" => "border-yellow-200 bg-yellow-50",
+        _ => ""
+    };
+}

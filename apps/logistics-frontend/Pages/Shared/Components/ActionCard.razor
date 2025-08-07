@@ -1,0 +1,20 @@
+@using Microsoft.AspNetCore.Components
+
+<div @onclick="e => OnClick.InvokeAsync(e)"
+     class="cursor-pointer p-4 rounded-lg border shadow-sm bg-white hover:shadow-md transition 
+            flex flex-col items-center justify-center text-center space-y-2 hover:bg-gray-50">
+
+    <div class="text-orange-500 text-2xl">
+        <i class="fas fa-@Icon"></i>
+    </div>
+
+    <div class="text-sm font-medium text-gray-700">
+        @Title
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string Icon { get; set; } = "plus"; // fallback icon
+    [Parameter] public EventCallback OnClick { get; set; }
+}

@@ -4,6 +4,7 @@
 @using System.Text.Json
 @using Microsoft.AspNetCore.WebUtilities
 @inject AuthenticationStateProvider AuthProvider
+@inject ToastService ToastService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject IHttpClientFactory HttpClientFactory
@@ -50,7 +51,7 @@
         <!-- Registration Form -->
         <EditForm Model="@registerModel" OnValidSubmit="@HandleValidSubmit">
             <DataAnnotationsValidator />
-            <ValidationSummary />
+            @* <ValidationSummary /> *@
 
             <div class="grid grid-cols-2 gap-4">
                 <div>
@@ -68,14 +69,72 @@
                 <ValidationMessage For="@(() => registerModel.Email)" />
             </div>
 
-            <div class="mt-4">
-                <InputText @bind-Value="registerModel.Password" type="password" placeholder="Password (8+ characters)" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500" />
-                <ValidationMessage For="@(() => registerModel.Password)" />
+            <!-- Password Field with Toggle -->
+            <div class="mt-4 relative">
+                <InputText @bind-Value="registerModel.Password"
+                        type="@(showPassword ? "text" : "password")"
+                        placeholder="Password (8+ characters)"
+                        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500" />
+
+                <button type="button"
+                        @onclick="TogglePasswordVisibility"
+                        class="absolute right-3 top-2.5 text-gray-600 hover:text-gray-800 focus:outline-none"
+                        tabindex="-1" aria-label="Toggle password visibility">
+                    @if (showPassword)
+                    {
+                        <!-- Eye Off Icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13.875 18.825A10.05 10.05 0 0112 19c-5 0-9-3.582-9-8s4-8 9-8a9.969 9.969 0 013.375.625m3.875 3.25A9.978 9.978 0 0121 11c0 4.418-4 8-9 8a9.978 9.978 0 01-2.887-.43M3 3l18 18" />
+                        </svg>
+                    }
+                    else
+                    {
+                        <!-- Eye Icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                    }
+                </button>
+
+                <ValidationMessage For="@(() => registerModel.Password)" class="text-red-600 text-sm mt-1" />
             </div>
 
-            <div class="mt-4">
-                <InputText @bind-Value="registerModel.ConfirmPassword" type="password" placeholder="Confirm Password" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500" />
-                <ValidationMessage For="@(() => registerModel.ConfirmPassword)" />
+            <!-- Confirm Password Field with Toggle -->
+            <div class="mt-4 relative">
+                <InputText @bind-Value="registerModel.ConfirmPassword"
+                        type="@(showConfirmPassword ? "text" : "password")"
+                        placeholder="Confirm Password"
+                        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500" />
+
+                <button type="button"
+                        @onclick="ToggleConfirmPasswordVisibility"
+                        class="absolute right-3 top-2.5 text-gray-600 hover:text-gray-800 focus:outline-none"
+                        tabindex="-1" aria-label="Toggle confirm password visibility">
+                    @if (showConfirmPassword)
+                    {
+                        <!-- Eye Off Icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13.875 18.825A10.05 10.05 0 0112 19c-5 0-9-3.582-9-8s4-8 9-8a9.969 9.969 0 013.375.625m3.875 3.25A9.978 9.978 0 0121 11c0 4.418-4 8-9 8a9.978 9.978 0 01-2.887-.43M3 3l18 18" />
+                        </svg>
+                    }
+                    else
+                    {
+                        <!-- Eye Icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                    }
+                </button>
+
+                <ValidationMessage For="@(() => registerModel.ConfirmPassword)" class="text-red-600 text-sm mt-1" />
             </div>
 
             <div class="mt-4 flex items-center">
@@ -90,7 +149,9 @@
                 </label>
             </div>
 
-            <button type="submit" class="w-full bg-green-600 text-white py-2 mt-6 rounded hover:bg-green-700 transition">
+            <button 
+                type="submit" 
+                class="w-full bg-green-600 text-white py-2 mt-6 rounded hover:bg-green-700 transition">
                 Create my account
             </button>
         </EditForm>
@@ -111,6 +172,18 @@
     private string displayRole = string.Empty;
     private string? successMessage { get; set; }
     private string? errorMessage { get; set; }
+    private bool showPassword = false;
+    private bool showConfirmPassword = false;
+
+    private void TogglePasswordVisibility()
+    {
+        showPassword = !showPassword;
+    }
+
+    private void ToggleConfirmPasswordVisibility()
+    {
+        showConfirmPassword = !showConfirmPassword;
+    }
 
     private class ErrorResponse {
         public string? Error { get; set; }
@@ -160,7 +233,7 @@
         var response = await http.PostAsJsonAsync("public/create", registerModel);
         if (response.IsSuccessStatusCode)
         {
-            successMessage = "User created successfully! Redirecting to login ...";
+            ToastService.ShowToast("User created successfully! Redirecting to login ...", ToastService.ToastLevel.Success);
             
             await Task.Delay(1500);
             registerModel = new RegisterModel();
@@ -176,11 +249,11 @@
                 {
                     PropertyNameCaseInsensitive = true
                 });
-                errorMessage = errorObj?.Error ?? "An unknown error occurred.";
+                ToastService.ShowToast(errorObj?.Error ?? "An unknown error occurred.", ToastService.ToastLevel.Error);
             }
             catch
             {
-                errorMessage = "Failed to parse error response.";
+                ToastService.ShowToast("Failed to parse error response.", ToastService.ToastLevel.Error);
             }
         }
     }

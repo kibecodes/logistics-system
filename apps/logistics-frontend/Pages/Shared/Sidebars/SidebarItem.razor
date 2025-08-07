@@ -3,17 +3,34 @@
 @using logistics_frontend.Models
 @inject NavigationManager Nav
 
-<li class="sidebar-item @(IsActive ? "active" : "")" @onclick="HandleClick">
-    <NavLink href="@Item.Link" class="sidebar-link" Match="NavLinkMatch.All">
-        @Item.Title
+<li class="mb-2 group">
+    <NavLink href="@Item.Link" Match="NavLinkMatch.All"
+             class='flex items-center px-4 py-2 rounded-md transition-colors duration-200
+                   ${(IsActive ? "bg-orange-500 text-white" : "text-gray-700 hover:bg-orange-100")}'
+             title="@Item.Title">
+        
+        <!-- Lucide Icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             class="lucide-@Item.Icon">
+        </svg>
+
+        @if (!IsCollapsed)
+        {
+            <span class="ml-3">@Item.Title</span>
+        }
     </NavLink>
 
-    @if (Item.SubItems?.Any() == true)
+    @if (Item.SubItems?.Any() == true && !IsCollapsed)
     {
-        <ul class="dropdown @(Expanded ? "open" : "")">
+        <ul class="ml-8 mt-2 space-y-1">
             @foreach (var sub in Item.SubItems)
             {
-                <li><NavLink href="@sub.Link">@sub.Title</NavLink></li>
+                <li>
+                    <NavLink href="@sub.Link" class="text-sm text-gray-600 hover:text-orange-600">
+                        @sub.Title
+                    </NavLink>
+                </li>
             }
         </ul>
     }
@@ -21,18 +38,18 @@
 
 @code {
     [Parameter] public SidebarMenuItem Item { get; set; } = default!;
-    private bool Expanded = false;
+    [Parameter] public bool IsCollapsed { get; set; }
 
     private bool IsActive => Nav.ToBaseRelativePath(Nav.Uri).Equals(Item.Link.Trim('/'), StringComparison.OrdinalIgnoreCase)
     || Item.SubItems?.Any(sub => 
         Nav.ToBaseRelativePath(Nav.Uri).Equals(Item.Link.Trim('/'), StringComparison.OrdinalIgnoreCase)
     ) == true;
 
-    private void HandleClick()
+    @* private void HandleClick()
     {
         if (Item.SubItems?.Any() == true)
         {
             Expanded = !Expanded;
         }
-    }
+    } *@
 }

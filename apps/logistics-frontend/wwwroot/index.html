@@ -9,6 +9,7 @@
 
     <!-- Global Tailwind-generated CSS -->
     <link href="css/site.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
 
     <!-- Optional: If using Bootstrap for components (can conflict with Tailwind) -->
     <!-- <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" /> -->
@@ -35,6 +36,14 @@
         <a class="dismiss">🗙</a>
     </div>
     <script src="_framework/blazor.webassembly.js"></script>
+
+    <!-- ✅ Lucide.js injection (add this!) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        lucide.createIcons();
+      });
+    </script>
 </body>
 
 </html>

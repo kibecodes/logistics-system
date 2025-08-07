@@ -61,6 +61,7 @@ builder.Services.AddScoped<FeedbackService>();
 builder.Services.AddScoped<InventoryService>();
 builder.Services.AddScoped<UserSessionService>();
 builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<ToastService>();
 
 // Authentication & Authorization
 builder.Services.AddOptions();

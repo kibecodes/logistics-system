@@ -1,9 +1,44 @@
-<nav class="bg-white shadow px-4 py-3 flex justify-between"> 
-    <span class="font-bold text-primary">BizzGro</span>
-    <div class="space-x-4">
-        <a href="/dashboard">Dashboard</a>
-        <a href="/orders">Orders</a>
-        <button class="text-red-500">Logout</button>
-    </div>
+@using logistics_frontend.Services.CustomAuthStateProvider
+@inject CustomAuthStateProvider AuthProvider
+@inject NavigationManager Navigation
+
+<nav class="fixed top-0 left-0 right-0 z-50 bg-white shadow-md px-6 py-3 flex items-center justify-between max-w-7xl mx-auto">
+  <!-- Left section (Title or Logo) -->
+  <div class="text-xl font-semibold font-poppins text-gray-800">
+    BizzGrow
+  </div>
+
+  <!-- Right section (User + Actions) -->
+  <div class="flex items-center space-x-4">
+      <!-- Notifications -->
+      <button class="relative text-gray-600 hover:text-orange-600">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bell-icon lucide-bell"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>
+          <span class="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full border border-white"></span>
+      </button>
+
+      <!-- User avatar & name -->
+      <div class="flex items-center space-x-2">
+          <img src="https://ui-avatars.com/api/?name=@UserName&background=FFA500&color=fff" 
+                alt="User Avatar" 
+                class="w-8 h-8 rounded-full shadow-md" />
+          <span class="text-sm font-medium font-poppins text-gray-800">@UserName</span>
+      </div>
+
+      <!-- Logout Button -->
+      <button 
+        class="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-2 rounded transition focus:outline-none focus:ring-2 focus:ring-red-400"
+        @onclick="Logout">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-out-icon lucide-log-out"><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/></svg>
+      </button>
+  </div>
 </nav>
 
+@code {
+    [Parameter] 
+    public string? UserName { get; set; }
+    private async Task Logout()
+    {
+        await AuthProvider.SignOutAsync();
+        Navigation.NavigateTo("/auth/login");
+    }
+}

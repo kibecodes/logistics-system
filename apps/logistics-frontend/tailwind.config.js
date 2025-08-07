@@ -13,6 +13,7 @@ module.exports = {
       },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+        poppins: ['Poppins', 'sans-serif'],
       },
     },
   },

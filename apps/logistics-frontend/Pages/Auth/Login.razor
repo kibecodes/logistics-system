@@ -11,6 +11,7 @@
 @inject CustomAuthStateProvider AuthProvider
 @inject IJSRuntime JS
 @inject IHttpClientFactory HttpClientFactory
+@inject ToastService ToastService
 
 <main id="login" class="flex justify-center items-center min-h-screen bg-white relative">
     <!-- Top Navigation -->
@@ -31,7 +32,7 @@
 
         <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
             <DataAnnotationsValidator />
-            <ValidationSummary />
+            @* <ValidationSummary /> *@
 
             <!-- Email / Username Input -->
             <div class="mb-4">
@@ -69,32 +70,50 @@
 
             <!-- Role Selector -->
             <div class="mb-6 flex justify-center items-center space-x-4">
-                <InputRadioGroup @bind-Value="loginModel.Role" class="flex gap-4">
-                    <label class="cursor-pointer">
-                        <InputRadio Value="loginModel.Role" class="hidden" />
-                        <div class="border rounded-lg px-6 py-3 text-center w-40
+                <div @onclick="@(() => SelectRole("admin"))"
+                    class="relative cursor-pointer border rounded-lg px-6 py-4 text-center w-40 transition duration-200 ease-in-out
                             @(loginModel.Role == "admin" 
                                 ? "border-green-600 border-2 bg-gray-50 shadow-md" 
-                                : "border-gray-300 hover:border-gray-600 cursor-pointer")">
-                            👩‍🌾 <div class="mt-1 font-medium">Admin</div>
+                                : "hover:shadow-md hover:border-gray-600 border-gray-300")">
+                    @if (loginModel.Role == "admin")
+                    {
+                        <div class="absolute top-2 right-2 text-green-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2l4 -4M12 22a10 10 0 1 1 0 -20a10 10 0 0 1 0 20z" />
+                            </svg>
                         </div>
-                    </label>
+                    }
+                    <div class="text-3xl">👩‍🌾</div>
+                    <div class="mt-2 font-medium text-black">Admin</div>
+                </div>
 
-                    <label class="cursor-pointer">
-                        <InputRadio Value="loginModel.Role" class="hidden" />
-                        <div class="border rounded-lg px-6 py-3 text-center w-40
+                <div @onclick="@(() => SelectRole("customer"))"
+                    class="relative cursor-pointer border rounded-lg px-6 py-4 text-center w-40 transition duration-200 ease-in-out
                             @(loginModel.Role == "customer" 
                                 ? "border-green-600 border-2 bg-gray-50 shadow-md" 
-                                : "border-gray-300 hover:border-gray-600 cursor-pointer")">
-                            🛒 <div class="mt-1 font-medium">Customer</div>
+                                : "hover:shadow-md hover:border-gray-600 border-gray-300")">
+                    @if (loginModel.Role == "customer")
+                    {
+                        <div class="absolute top-2 right-2 text-green-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2l4 -4M12 22a10 10 0 1 1 0 -20a10 10 0 0 1 0 20z" />
+                            </svg>
                         </div>
-                    </label>
-                </InputRadioGroup>
+                    }
+                    <div class="text-3xl">🛒</div>
+                    <div class="mt-2 font-medium text-black">Customer</div>
+                </div>
             </div>
 
+            <!-- Validation -->
+            <ValidationMessage For="@(() => loginModel.Role)" class="text-red-600 text-sm text-center mb-4" />
+
+
             <!-- Submit Button -->
-            <button type="submit" class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition" 
-                    disabled="@string.IsNullOrEmpty(loginModel.Role)">
+            <button 
+                type="submit" 
+                class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transform transition-transform duration-100 active:scale-105 disabled:opacity-50 disabled:cursor-not-allowed" 
+            >
                 Continue
             </button>
         </EditForm>
@@ -141,13 +160,18 @@
     {
         showPassword = !showPassword;
     }
+    private void SelectRole(string role)
+    {
+        loginModel.Role = role;
+    }
+
     private async Task HandleLogin()
     {
         errorMessage = null;
 
         if (string.IsNullOrEmpty(loginModel.Role))
         {
-            errorMessage = "Please select a role.";
+            ToastService.ShowToast("Please select a role.", ToastService.ToastLevel.Warning);
             return;
         }
 
@@ -169,13 +193,15 @@
             var response = await http.PostAsync("public/login", content);
             var json = await response.Content.ReadAsStringAsync();
 
+            loginModel.Password = string.Empty;
+
             if (response.IsSuccessStatusCode)
             {
                 var tokenResponse = JsonSerializer.Deserialize<LoginTokenResponse>(json);
 
                 if (tokenResponse is null || string.IsNullOrEmpty(tokenResponse.Token))
                 {
-                    errorMessage = "Token not received from server.";
+                    ToastService.ShowToast("Token not received from server.", ToastService.ToastLevel.Error);
                     return;
                 }
 
@@ -183,18 +209,20 @@
 
                 if (claimsUser?.Role != loginModel.Role)
                 {
-                    errorMessage = $"User exists but is not assigned to role '{loginModel.Role}'";
+                    ToastService.ShowToast($"User exists but is not assigned to role '{loginModel.Role}'", ToastService.ToastLevel.Error);
                     return;
                 }
 
                 await AuthProvider.SignInAsync(tokenResponse.Token);
 
+                await JS.InvokeVoidAsync("localStorage.setItem", "showLoginSuccess", "true");
                 Navigation.NavigateTo($"/{claimsUser.Role}/dashboard", forceLoad: true);
             }
             else
             {
                 var errObj = JsonSerializer.Deserialize<ErrorResponse>(json);
-                errorMessage = errObj?.Error ?? "Unexpected error occurred.";
+                ToastService.ShowToast(errObj?.Error ?? "Unexpected error occurred.", ToastService.ToastLevel.Error);
+
             }
         }
         catch (Exception ex)

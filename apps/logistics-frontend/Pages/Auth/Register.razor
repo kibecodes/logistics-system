@@ -16,13 +16,13 @@
     <div class="flex flex-col sm:flex-row gap-6 sm:gap-10 justify-center">
 
         <!-- Business Owner Card -->
-        <div @onclick="@(() => SelectRole("producer"))"
+        <div @onclick="@(() => SelectRole("admin"))"
             class="relative cursor-pointer border rounded-lg px-8 py-6 text-center w-72 transition duration-200 ease-in-out
-                    @(selectedRole == "producer" 
+                    @(selectedRole == "admin" 
                         ? "border-green-600 border-4 bg-gray-50 shadow-md" 
                         : "hover:shadow-md hover:border-gray-600 border-gray-300")">
             
-            @if (selectedRole == "producer")
+            @if (selectedRole == "admin")
             {
                 <div class="absolute top-3 right-3 text-green-600">
                     <!-- Lucide check-circle icon SVG -->

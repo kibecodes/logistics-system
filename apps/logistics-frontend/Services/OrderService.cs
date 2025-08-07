@@ -27,9 +27,33 @@ public class OrderService
         return orders ?? new List<Order>();
     }
 
+    public async Task<Order> UpdateOrder(Guid orderId, string column, object value)
+    {
+        var requestBody = new
+        {
+            column,
+            value
+        };
+
+        var response = await _http.PutAsJsonAsync($"orders/{orderId}/update", requestBody);
+        if (response.IsSuccessStatusCode)
+        {
+            return await response.Content.ReadFromJsonAsync<Order>() ?? new Order();
+        }
+
+        return null;
+
+    }
+
     public async Task<List<Order>> GetAllOrders()
     {
         var orders = await _http.GetFromJsonAsync<List<Order>>("orders/all_orders");
         return orders ?? new List<Order>();
+    }
+
+    public async Task<bool> DeleteOrder(Guid id)
+    {
+        var res = await _http.DeleteAsync($"orders/{id}");
+        return res.IsSuccessStatusCode;
     }
 }
