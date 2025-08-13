@@ -1,0 +1,58 @@
+@typeparam TModel
+@using logistics_frontend.Models.Shared
+
+@if (IsOpen && Model is not null)
+{
+    <div class="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center">
+        <div class="bg-white w-full max-w-xl p-6 rounded-lg shadow-lg relative">
+            <h3 class="text-lg font-semibold mb-4">@((IsEditMode ? "Edit" : "View") + " " + typeof(TModel).Name)</h3>
+
+            <div class="space-y-4">
+                @foreach (var field in Fields)
+                {
+                    var fieldValue = field.GetValue()?.ToString();
+
+                    if (field.Type == "select")
+                    {
+                        <FieldBlock Label="@field.Label"
+                                    FieldType="select"
+                                    Options="@field.Options"
+                                    Value="@fieldValue"
+                                    ValueChanged="async val => await field.SetValueAsync(val)"
+                                    IsEditing="IsEditMode" />
+                    }
+                    else
+                    {
+                        <FieldBlock Label="@field.Label"
+                                    Value="@fieldValue"
+                                    ValueChanged="async val => await field.SetValueAsync(val)"
+                                    IsEditing="IsEditMode" />
+                    }
+                }
+            </div>
+
+            <div class="mt-6 flex justify-between">
+                <button class="text-sm px-4 py-2 bg-gray-200 rounded" @onclick="Close">Close</button>
+
+                @if (!IsEditMode)
+                {
+                    <button class="text-sm px-4 py-2 bg-yellow-500 text-white rounded" @onclick="EnableEdit">Edit</button>
+                }
+                else
+                {
+                    <button class="text-sm px-4 py-2 bg-green-600 text-white rounded" @onclick="Save">Save Changes</button>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public TModel Model { get; set; } = default!;
+    [Parameter] public bool IsEditMode { get; set; }
+    [Parameter] public EventCallback Close { get; set; }
+    [Parameter] public EventCallback EnableEdit { get; set; }
+    [Parameter] public EventCallback Save { get; set; }
+    [Parameter] public List<IFieldDefinitionBase> Fields { get; set; } = new();
+}

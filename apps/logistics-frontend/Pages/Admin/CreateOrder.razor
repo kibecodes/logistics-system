@@ -1,85 +1,8 @@
+
+@using logistics_frontend.Pages.Shared.Components
+
 @page "/admin/createorder"
 @layout MainLayout
-@using logistics_frontend.Models.Order
-@inject OrderService OrderService
-@inject NavigationManager Navigation
-@inject AuthenticationStateProvider AuthProvider
 @attribute [Authorize(Roles = "admin")]
 
-<h3>Create New Order</h3>
-
-@if (!string.IsNullOrEmpty(successMessage))
-{
-    <div class="alert alert-success">
-        @successMessage
-    </div>
-}
-
-@if (!string.IsNullOrEmpty(errorMessage))
-{
-    <div class="alert alert-danger">
-        @errorMessage
-    </div>
-}
-
-<EditForm Model="@order" OnValidSubmit="HandleValidSubmit">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
-
-    <div class="mb-3">
-        <label>Pickup Location</label>
-        <InputText class="form-control" @bind-Value="order.PickupLocation"/>
-    </div>
-
-    <div class="mb-3">
-        <label>Delivery Location</label>
-        <InputText class="form-control" @bind-Value="order.DeliveryLocation"/>
-    </div>
-
-    <div class="mb-3">
-        <label>Customer ID</label>
-        <InputText class="form-control" @bind-Value="CustomerIdText"/>
-    </div>
-
-    <button type="submit" class="btn btn-primary">Create Order</button>
-
-</EditForm>
-
-@code {
-    private string CustomerIdText { get; set; } = string.Empty;
-    private CreateOrderRequest order = new();
-    private string? successMessage { get; set; }
-    private string? errorMessage { get; set; }
-
-    private async Task HandleValidSubmit()
-    {
-        if (Guid.TryParse(CustomerIdText, out var parsedId))
-        {
-            try
-            {
-                order.CustomerID = parsedId;
-                await OrderService.AddOrder(order);
-                successMessage = "Order successfully created!";
-                await ClearMessageAfterDelay();
-                Navigation.NavigateTo("/orders");
-            }
-            catch(Exception ex)
-            {
-                errorMessage = $"Failed to create order:{ex.Message}";
-                await ClearMessageAfterDelay();
-            }
-        } 
-        else 
-        {
-            errorMessage = "Invalid Customer ID format.";
-            await ClearMessageAfterDelay();
-        }
-    }
-    private async Task ClearMessageAfterDelay()
-    {
-        await Task.Delay(4000);
-        successMessage = null;
-        errorMessage = null;
-        StateHasChanged(); // trigger UI update
-    }
-}
+<CreateOrderForm />

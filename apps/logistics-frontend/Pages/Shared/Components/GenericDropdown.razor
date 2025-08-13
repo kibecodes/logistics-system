@@ -1,0 +1,29 @@
+@typeparam TItem
+
+<InputSelect 
+    TValue="Guid"
+    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm 
+        focus:outline-none focus:ring-2 focus:ring-blue-500 
+        focus:border-blue-500 text-sm text-gray-800"
+    @bind-Value="@SelectedId">
+
+    <option disabled value="@Guid.Empty" selected>-- @Placeholder --</option>
+    @if (Items != null)
+    {
+        @foreach (var item in Items)
+        {
+            <option value="@GetValue(item).ToString()">
+                @GetLabel(item)
+            </option>
+        }
+    }
+</InputSelect>
+
+@code {
+    [Parameter] public List<TItem> Items { get; set; } = new();
+    [Parameter] public Func<TItem, Guid> GetValue { get; set; } = default!;
+    [Parameter] public Func<TItem, string> GetLabel { get; set; } = default!;
+    [Parameter] public Guid SelectedId { get; set; }
+    [Parameter] public EventCallback<Guid> SelectedIdChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "Select an option";
+}

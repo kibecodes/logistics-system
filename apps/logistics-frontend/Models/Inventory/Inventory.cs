@@ -1,22 +1,50 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace logistics_frontend.Models.Inventory
 {
     public class Inventory
     {
+        [JsonPropertyName("id")]
         public Guid ID { get; set; }
+
+        [JsonPropertyName("admin_id")]
         public Guid AdminID { get; set; }
+
+        [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("slug")]
         public string? Slug { get; set; }
+
+        [JsonPropertyName("category")]
         public string Category { get; set; } = string.Empty;
+
+        [JsonPropertyName("stock")]
         public int Stock { get; set; }
-        public float Price { get; set; }
+
+        [JsonPropertyName("price")]
+        public Money Price { get; set; } = new Money();
+
+        [JsonPropertyName("images")]
         public string Images { get; set; } = string.Empty;
+
+        [JsonPropertyName("unit")]
         public string Unit { get; set; } = string.Empty;
+
+        [JsonPropertyName("packaging")]
         public string Packaging { get; set; } = string.Empty;
+
+        [JsonPropertyName("description")]
         public string Description { get; set; } = string.Empty;
+
+        [JsonPropertyName("location")]
         public string Location { get; set; } = string.Empty;
+
+        [JsonPropertyName("created_at")]
         public DateTime CreatedAt { get; set; }
+
+        [JsonPropertyName("updated_at")]
         public DateTime UpdatedAt { get; set; }
 
     }
