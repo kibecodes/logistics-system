@@ -59,3 +59,7 @@ func (uc *UseCase) GetStorePublicView(ctx context.Context, adminSlug string) (*d
 func (uc *UseCase) DeleteByID(ctx context.Context, id uuid.UUID) error {
 	return uc.repo.Delete(ctx, id)
 }
+
+func (uc *UseCase) GetAllInventories(ctx context.Context) ([]domain.AllInventory, error) {
+	return uc.repo.GetAllInventories(ctx)
+}

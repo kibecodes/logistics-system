@@ -32,3 +32,8 @@ func (u *User) ComparePassword(password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password))
 	return err == nil
 }
+
+type AllCustomers struct {
+	ID   uuid.UUID `db:"id" json:"id"`
+	Name string    `db:"full_name" json:"name"`
+}

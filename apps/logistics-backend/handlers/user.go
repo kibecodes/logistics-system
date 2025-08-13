@@ -21,6 +21,8 @@ type UserHandler struct {
 	UC *usecase.UseCase
 }
 
+// ErrorResponse is a generic error model for API responses.
+// swagger:model
 type ErrorResponse struct {
 	Error  string `json:"error" example:"Invalid request"`                               // user-friendly message
 	Detail string `json:"detail,omitempty" example:"validation failed on field 'email'"` // optional internal error
@@ -289,8 +291,8 @@ func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		"iss":   "my-client",   // Kong
 		"sub":   u.ID.String(), // subject
 		"email": u.Email,
-		"role":  u.Role,                                // custom claim
-		"name": u.FullName,
+		"role":  u.Role, // custom claim
+		"name":  u.FullName,
 		"exp":   time.Now().Add(time.Hour * 24).Unix(), // expires in 24h
 	}
 

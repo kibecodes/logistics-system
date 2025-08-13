@@ -6,9 +6,11 @@ import (
 	"os"
 
 	"logistics-backend/handlers"
-	"logistics-backend/internal/adapter/driveradapter"
-	"logistics-backend/internal/adapter/inventoryadapter"
-	"logistics-backend/internal/adapter/orderadapter"
+	deliveryadapter "logistics-backend/internal/adapters/delivery"
+	driveradapter "logistics-backend/internal/adapters/driver"
+	inventoryadapter "logistics-backend/internal/adapters/inventory"
+	orderadapter "logistics-backend/internal/adapters/order"
+	useradapter "logistics-backend/internal/adapters/user"
 	"logistics-backend/internal/repository/postgres"
 	"logistics-backend/internal/router"
 	deliveryUsecase "logistics-backend/internal/usecase/delivery"
@@ -19,6 +21,8 @@ import (
 	orderUsecase "logistics-backend/internal/usecase/order"
 	paymentUsecase "logistics-backend/internal/usecase/payment"
 	userUsecase "logistics-backend/internal/usecase/user"
+
+	"logistics-backend/internal/application"
 
 	_ "logistics-backend/docs"
 
@@ -63,27 +67,36 @@ func main() {
 	inventoryRepo := postgres.NewInventoryRespository(db)
 
 	// Set up usecase
-	dUsecase := driverUsecase.NewUseCase(driverRepo)
-	driveradapter := driveradapter.DriverUseCaseAdapter{UseCase: dUsecase}
-	uUsecase := userUsecase.NewUseCase(userRepo, &driveradapter)
-	pUsecase := paymentUsecase.NewUseCase(paymentRepo)
-	fUsecase := feedbackUsecase.NewUseCase(feedbackRepo)
-	nUsecase := notificationUsecase.NewUseCase(notificationRepo)
-	iUsecase := inventoryUsecase.NewUseCase(inventoryRepo)
-	inventoryAdapter := inventoryadapter.InventoryUseCaseAdapter{UseCase: iUsecase}
-	oUsecase := orderUsecase.NewUseCase(orderRepo, &inventoryAdapter)
-	orderAdapter := orderadapter.OrderUseCaseAdapter{UseCase: oUsecase}
-	eUsecase := deliveryUsecase.NewUseCase(deliveryRepo, &orderAdapter)
+	// Individual
+	driverUC := driverUsecase.NewUseCase(driverRepo)
+	userUC := userUsecase.NewUseCase(userRepo, driverUC)
+	inventoryUC := inventoryUsecase.NewUseCase(inventoryRepo)
+	orderUC := orderUsecase.NewUseCase(orderRepo, &inventoryadapter.UseCaseAdapter{UseCase: inventoryUC}, &useradapter.UseCaseAdapter{UseCase: userUC})
+	deliveryUC := deliveryUsecase.NewUseCase(deliveryRepo, &orderadapter.UseCaseAdapter{UseCase: orderUC}, &driveradapter.UseCaseAdapter{UseCase: driverUC})
+
+	// Combined cross-domain service
+	orderService := application.NewOrderService(
+		&useradapter.UseCaseAdapter{UseCase: userUC},
+		&orderadapter.UseCaseAdapter{UseCase: orderUC},
+		&driveradapter.UseCaseAdapter{UseCase: driverUC},
+		&deliveryadapter.UseCaseAdapter{UseCase: deliveryUC},
+		&inventoryadapter.UseCaseAdapter{UseCase: inventoryUC},
+	)
+
+	// Other usecases
+	paymentUC := paymentUsecase.NewUseCase(paymentRepo)
+	feedbackUC := feedbackUsecase.NewUseCase(feedbackRepo)
+	notificationUC := notificationUsecase.NewUseCase(notificationRepo)
 
 	// Set up Handlers
-	userHandler := handlers.NewUserHandler(uUsecase)
-	orderHandler := handlers.NewOrderHandler(oUsecase)
-	driverHandler := handlers.NewDriverHandler(dUsecase)
-	deliveryHandler := handlers.NewDeliveryHandler(eUsecase)
-	paymentHandler := handlers.NewPaymentHandler(pUsecase)
-	feedbackHandler := handlers.NewFeedbackHandler(fUsecase)
-	notificationHandler := handlers.NewNotificationHandler(nUsecase)
-	inventoryHandler := handlers.NewInventoryHandler(iUsecase)
+	userHandler := handlers.NewUserHandler(userUC)
+	orderHandler := handlers.NewOrderHandler(orderService)
+	driverHandler := handlers.NewDriverHandler(driverUC)
+	deliveryHandler := handlers.NewDeliveryHandler(deliveryUC)
+	paymentHandler := handlers.NewPaymentHandler(paymentUC)
+	feedbackHandler := handlers.NewFeedbackHandler(feedbackUC)
+	notificationHandler := handlers.NewNotificationHandler(notificationUC)
+	inventoryHandler := handlers.NewInventoryHandler(inventoryUC)
 
 	// Start server
 	r := router.NewRouter(userHandler, orderHandler, driverHandler, deliveryHandler, paymentHandler, feedbackHandler, notificationHandler, inventoryHandler, publicApiBaseUrl)

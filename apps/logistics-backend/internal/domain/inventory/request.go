@@ -1,23 +1,24 @@
 package inventory
 
 import (
+	"logistics-backend/internal/domain/money"
 	generate "logistics-backend/internal/utils"
 
 	"github.com/google/uuid"
 )
 
 type CreateInventoryRequest struct {
-	AdminID     uuid.UUID `json:"admin_id"`                    // Foreign key
-	Name        string    `json:"name" binding:"required"`     // e.g. “Fresh Milk”
-	Category    string    `json:"category" binding:"required"` // e.g. “Dairy”
-	Stock       int       `json:"stock" binding:"required"`
-	Price       float64   `json:"price" binding:"required"`
-	Images      string    `json:"images" binding:"required"`    // could be JSON array or URLs
-	Unit        string    `json:"unit" binding:"required"`      // "per litre", "per bucket"
-	Packaging   string    `json:"packaging" binding:"required"` // “Bucket/Single”
-	Description string    `json:"description" binding:"required"`
-	Location    string    `json:"location" binding:"required"` // optional
-	Slug        string    `json:"slug" binding:"required"`
+	AdminID     uuid.UUID   `json:"admin_id"`                    // Foreign key
+	Name        string      `json:"name" binding:"required"`     // e.g. “Fresh Milk”
+	Category    string      `json:"category" binding:"required"` // e.g. “Dairy”
+	Stock       int         `json:"stock" binding:"required"`
+	Price       money.Money `json:"price" binding:"required"`
+	Images      string      `json:"images" binding:"required"`    // could be JSON array or URLs
+	Unit        string      `json:"unit" binding:"required"`      // "per litre", "per bucket"
+	Packaging   string      `json:"packaging" binding:"required"` // “Bucket/Single”
+	Description string      `json:"description" binding:"required"`
+	Location    string      `json:"location" binding:"required"` // optional
+	Slug        string      `json:"slug" binding:"required"`
 }
 
 func (r *CreateInventoryRequest) ToInventory() *Inventory {

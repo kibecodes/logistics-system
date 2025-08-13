@@ -9,8 +9,14 @@ import (
 
 // cross-domain DI using necessary interface
 
+// Access the inventory domain usecase methods.
 type InventoryReader interface {
-	// inventory
 	GetInventoryByID(ctx context.Context, id uuid.UUID) (*inventory.Inventory, error)
 	UpdateInventory(ctx context.Context, inventoryId uuid.UUID, column string, value any) error
+	GetAllInventories(ctx context.Context) ([]Inventory, error)
+}
+
+// Access the user domain usecase method for getting users of role customers.
+type CustomerReader interface {
+	GetAllCustomers(ctx context.Context) ([]Customer, error)
 }

@@ -10,12 +10,13 @@ import (
 )
 
 type UseCase struct {
-	repo     order.Repository
-	invLogic order.InventoryReader
+	repo    order.Repository
+	invRepo order.InventoryReader
+	usrRepo order.CustomerReader
 }
 
-func NewUseCase(repo order.Repository, inv order.InventoryReader) *UseCase {
-	return &UseCase{repo: repo, invLogic: inv}
+func NewUseCase(repo order.Repository, invRepo order.InventoryReader, usrRepo order.CustomerReader) *UseCase {
+	return &UseCase{repo: repo, invRepo: invRepo, usrRepo: usrRepo}
 }
 
 func (uc *UseCase) CreateOrder(ctx context.Context, o *order.Order) error {
@@ -23,7 +24,7 @@ func (uc *UseCase) CreateOrder(ctx context.Context, o *order.Order) error {
 		return order.ErrorInvalidQuantity
 	}
 
-	inv, err := uc.invLogic.GetInventoryByID(ctx, o.InventoryID)
+	inv, err := uc.invRepo.GetInventoryByID(ctx, o.InventoryID)
 	if err != nil {
 		return fmt.Errorf("could not fetch inventory: %w", err)
 	}
@@ -34,7 +35,7 @@ func (uc *UseCase) CreateOrder(ctx context.Context, o *order.Order) error {
 
 	// updating inventory table
 	newStock := inv.Stock - o.Quantity
-	if err := uc.invLogic.UpdateInventory(ctx, inv.ID, "stock", newStock); err != nil {
+	if err := uc.invRepo.UpdateInventory(ctx, inv.ID, "stock", newStock); err != nil {
 		return fmt.Errorf("could not update inventory stock: %w", err)
 	}
 
@@ -70,4 +71,12 @@ func (uc *UseCase) ListOrders(ctx context.Context) ([]*order.Order, error) {
 
 func (uc *UseCase) DeleteOrder(ctx context.Context, id uuid.UUID) error {
 	return uc.repo.Delete(ctx, id)
+}
+
+func (uc *UseCase) GetAllInventories(ctx context.Context) ([]order.Inventory, error) {
+	return uc.invRepo.GetAllInventories(ctx)
+}
+
+func (uc *UseCase) GetAllCustomers(ctx context.Context) ([]order.Customer, error) {
+	return uc.usrRepo.GetAllCustomers(ctx)
 }

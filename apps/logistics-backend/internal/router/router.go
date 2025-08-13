@@ -67,6 +67,7 @@ func NewRouter(u *handlers.UserHandler, o *handlers.OrderHandler, d *handlers.Dr
 			r.Route("/orders", func(r chi.Router) {
 				r.Post("/create", o.CreateOrder)
 				r.Get("/all_orders", o.ListOrders)
+				r.Get("/form-data", o.GetOrderFormData)
 				r.Get("/by-id/{id}", o.GetOrderByID)
 				r.Get("/by-customer/{customer_id}", o.GetOrderByCustomer)
 				r.Put("/{id}/update", o.UpdateOrder)

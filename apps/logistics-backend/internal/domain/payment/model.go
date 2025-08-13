@@ -21,10 +21,11 @@ const (
 )
 
 type Payment struct {
-	ID      uuid.UUID     `db:"id" json:"id"`
-	OrderID uuid.UUID     `db:"order_id" json:"order_id"`
-	Amount  float64       `db:"amount" json:"amount"`
-	Method  PaymentMethod `db:"method" json:"method"`
-	Status  PaymentStatus `db:"status" json:"status"`
-	PaidAt  time.Time     `db:"paid_at" json:"paid_at"`
+	ID       uuid.UUID     `db:"id" json:"id"`
+	OrderID  uuid.UUID     `db:"order_id" json:"order_id"`
+	Amount   int64         `db:"amount" json:"amount"`
+	Currency string        `db:"currency" json:"currency"`
+	Method   PaymentMethod `db:"method" json:"method"`
+	Status   PaymentStatus `db:"status" json:"status"`
+	PaidAt   time.Time     `db:"paid_at" json:"paid_at"`
 }

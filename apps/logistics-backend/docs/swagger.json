@@ -1259,6 +1259,12 @@
                                 "$ref": "#/definitions/order.Order"
                             }
                         }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -1404,6 +1410,32 @@
                         "description": "Internal server error",
                         "schema": {
                             "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/orders/form-data": {
+            "get": {
+                "description": "Returns a list of customers and inventories for populating order form dropdowns.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "Get data for order form dropdowns",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/order.DropdownDataRequest"
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch customers or inventories",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     }
                 }
@@ -2590,6 +2622,45 @@
                 },
                 "quantity": {
                     "type": "integer"
+                }
+            }
+        },
+        "order.Customer": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "order.DropdownDataRequest": {
+            "type": "object",
+            "properties": {
+                "customers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/order.Customer"
+                    }
+                },
+                "inventories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/order.Inventory"
+                    }
+                }
+            }
+        },
+        "order.Inventory": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },
