@@ -10,12 +10,13 @@ import (
 )
 
 type UseCase struct {
-	repo         delivery.Repository
-	adapterLogic delivery.OrderReader
+	repo    delivery.Repository
+	ordRepo delivery.OrderReader
+	drvRepo delivery.DriverReader
 }
 
-func NewUseCase(repo delivery.Repository, adpt delivery.OrderReader) *UseCase {
-	return &UseCase{repo: repo, adapterLogic: adpt}
+func NewUseCase(repo delivery.Repository, ordRepo delivery.OrderReader, drvRepo delivery.DriverReader) *UseCase {
+	return &UseCase{repo: repo, ordRepo: ordRepo, drvRepo: drvRepo}
 }
 
 func (uc *UseCase) CreateDelivery(ctx context.Context, d *delivery.Delivery) error {
@@ -26,7 +27,7 @@ func (uc *UseCase) CreateDelivery(ctx context.Context, d *delivery.Delivery) err
 	defer tx.Rollback()
 
 	// 1. fetch order
-	order, err := uc.adapterLogic.GetOrderByID(ctx, d.OrderID)
+	order, err := uc.ordRepo.GetOrderByID(ctx, d.OrderID)
 	if err != nil {
 		return fmt.Errorf("could not fetch order: %w", err)
 	}
@@ -35,7 +36,7 @@ func (uc *UseCase) CreateDelivery(ctx context.Context, d *delivery.Delivery) err
 	}
 
 	// 2. update order status using tx
-	if err := uc.adapterLogic.UpdateOrderTx(ctx, tx, order.ID, "status", "assigned"); err != nil {
+	if err := uc.ordRepo.UpdateOrderTx(ctx, tx, order.ID, "status", "assigned"); err != nil {
 		return fmt.Errorf("could not update order status: %w", err)
 	}
 
@@ -59,7 +60,7 @@ func (uc *UseCase) UpdateDelivery(ctx context.Context, deliveryID uuid.UUID, col
 func (uc *UseCase) AcceptDelivery(ctx context.Context, d *delivery.Delivery) error {
 	// get driver by id
 	log.Printf("delivery usecase driver id: %+v", d.DriverID)
-	driver, err := uc.adapterLogic.GetDriverByID(ctx, d.DriverID)
+	driver, err := uc.drvRepo.GetDriverByID(ctx, d.DriverID)
 	if err != nil {
 		log.Printf("ERROR fetching driver: %v", err)
 		return fmt.Errorf("could not fetch driver: %w", err)
@@ -81,12 +82,12 @@ func (uc *UseCase) AcceptDelivery(ctx context.Context, d *delivery.Delivery) err
 	defer tx.Rollback()
 
 	// get order
-	order, err := uc.adapterLogic.GetOrderByID(ctx, d.OrderID)
+	order, err := uc.ordRepo.GetOrderByID(ctx, d.OrderID)
 	if err != nil {
 		return fmt.Errorf("could not fetch order: %w", err)
 	}
 	// update order
-	if err := uc.adapterLogic.UpdateOrderTx(ctx, tx, order.ID, "status", "in_transit"); err != nil {
+	if err := uc.ordRepo.UpdateOrderTx(ctx, tx, order.ID, "status", "in_transit"); err != nil {
 		return fmt.Errorf("could not update order status: %w", err)
 	}
 
@@ -96,7 +97,7 @@ func (uc *UseCase) AcceptDelivery(ctx context.Context, d *delivery.Delivery) err
 	}
 
 	// update driver availability
-	if err := uc.adapterLogic.UpdateDriverAvailability(ctx, driver.ID, "availability", false); err != nil {
+	if err := uc.drvRepo.UpdateDriverAvailability(ctx, driver.ID, "availability", false); err != nil {
 		return fmt.Errorf("could not update driver availability: %w", err)
 	}
 

@@ -27,3 +27,20 @@ func (r *CreateOrderRequest) ToOrder() *Order {
 		OrderStatus:      Pending,
 	}
 }
+
+// DropdownDataRequest represents the data used to populate order form dropdowns.
+// swagger:model
+type DropdownDataRequest struct {
+	Customers   []Customer  `json:"customers"`
+	Inventories []Inventory `json:"inventories"`
+}
+
+type Customer struct {
+	ID   uuid.UUID `db:"id" json:"id"`
+	Name string    `db:"full_name" json:"name"`
+}
+
+type Inventory struct {
+	ID   uuid.UUID `db:"id" json:"id"`
+	Name string    `db:"name" json:"name"`
+}

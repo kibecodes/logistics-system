@@ -12,12 +12,12 @@ import (
 )
 
 type UseCase struct {
-	repo  domain.Repository
-	dRepo domain.CreateDriver
+	repo    domain.Repository
+	drvRepo domain.DriverReader
 }
 
-func NewUseCase(repo domain.Repository, dRepo domain.CreateDriver) *UseCase {
-	return &UseCase{repo: repo, dRepo: dRepo}
+func NewUseCase(repo domain.Repository, drvRepo domain.DriverReader) *UseCase {
+	return &UseCase{repo: repo, drvRepo: drvRepo}
 }
 
 func (uc *UseCase) RegisterUser(ctx context.Context, u *domain.User) error {
@@ -44,7 +44,7 @@ func (uc *UseCase) RegisterUser(ctx context.Context, u *domain.User) error {
 			Available:       true,
 			CreatedAt:       time.Now(),
 		}
-		if err := uc.dRepo.RegisterDriver(ctx, driver); err != nil {
+		if err := uc.drvRepo.RegisterDriver(ctx, driver); err != nil {
 			return fmt.Errorf("could not register driver: %w", err)
 		}
 	}
@@ -75,4 +75,8 @@ func (uc *UseCase) ListUsers(ctx context.Context) ([]*domain.User, error) {
 
 func (uc *UseCase) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	return uc.repo.Delete(ctx, id)
+}
+
+func (uc *UseCase) GetAllCustomers(ctx context.Context) ([]domain.AllCustomers, error) {
+	return uc.repo.GetAllCustomers(ctx)
 }

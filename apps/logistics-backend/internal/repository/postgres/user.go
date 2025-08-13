@@ -109,3 +109,15 @@ func (r *UserRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	_, err := r.db.ExecContext(ctx, query, id)
 	return err
 }
+
+func (r *UserRepository) GetAllCustomers(ctx context.Context) ([]user.AllCustomers, error) {
+	query := `
+        SELECT id, full_name
+        FROM users
+        WHERE role = 'customer'
+        ORDER BY full_name ASC
+    `
+	var customers []user.AllCustomers
+	err := r.db.Select(&customers, query)
+	return customers, err
+}

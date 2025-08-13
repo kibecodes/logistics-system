@@ -1,0 +1,50 @@
+<div>
+    <label class="block text-sm font-medium text-gray-700">@Label</label>
+
+    @if (IsEditing)
+    {
+        @if (FieldType == "select" && Options != null)
+        {
+            <select class="w-full px-3 py-2 border rounded-md" @bind="Value">
+                @foreach (var opt in Options)
+                {
+                    <option value="@opt">@opt</option>
+                }
+            </select>
+        }
+        else
+        {
+            <input class="w-full px-3 py-2 border rounded-md" @bind="Value" />
+        }
+    }
+    else
+    {
+        <p class="text-gray-800">@Value</p>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string Label { get; set; } = "";
+
+    [Parameter]
+    public string Value { get; set; } = "";
+
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+
+    [Parameter]
+    public bool IsEditing { get; set; }
+
+    [Parameter]
+    public string FieldType { get; set; } = "text";
+
+    [Parameter]
+    public List<string>? Options { get; set; }
+
+    private async Task OnValueChanged(ChangeEventArgs e)
+    {
+        var newValue = e.Value?.ToString() ?? "";
+        await ValueChanged.InvokeAsync(newValue);
+    }
+}

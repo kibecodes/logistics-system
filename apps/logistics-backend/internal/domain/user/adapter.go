@@ -5,6 +5,6 @@ import (
 	"logistics-backend/internal/domain/driver"
 )
 
-type CreateDriver interface {
+type DriverReader interface {
 	RegisterDriver(ctx context.Context, d *driver.Driver) error
 }

@@ -22,8 +22,8 @@ func NewInventoryRespository(db *sqlx.DB) inventory.Repository {
 func (r *InventoryRepository) Create(i *inventory.Inventory) error {
 	query := `
 		INSERT INTO inventories 
-		(admin_id, name, category, stock, price, images, unit, packaging, description, location, slug)
-		VALUES (:admin_id, :name, :category, :stock, :price, :images, :unit, :packaging, :description, :location, :slug)
+		(admin_id, name, category, stock, price_amount, price_currency, images, unit, packaging, description, location, slug)
+		VALUES (:admin_id, :name, :category, :stock, :price.amount, :price.currency, :images, :unit, :packaging, :description, :location, :slug)
 		RETURNING id
 	`
 	stmt, err := r.db.PrepareNamed(query)
@@ -35,7 +35,7 @@ func (r *InventoryRepository) Create(i *inventory.Inventory) error {
 
 func (r *InventoryRepository) GetByID(InventoryID uuid.UUID) (*inventory.Inventory, error) {
 	query := `
-		SELECT id, admin_id, name, category, stock, price, images, unit, packaging, description, location, slug 
+		SELECT id, admin_id, name, category, stock, price_amount AS "price.amount", price_currency AS "price.currency", images, unit, packaging, description, location, slug 
 		FROM inventories 
 		WHERE id = $1
 	`
@@ -46,7 +46,7 @@ func (r *InventoryRepository) GetByID(InventoryID uuid.UUID) (*inventory.Invento
 
 func (r *InventoryRepository) GetByName(InventoryName string) (*inventory.Inventory, error) {
 	query := `
-		SELECT id, admin_id, name, category, stock, price, images, unit, packaging, description, location, slug
+		SELECT id, admin_id, name, category, stock, price_amount AS "price.amount", price_currency AS "price.currency", images, unit, packaging, description, location, slug
 		FROM inventories
 		WHERE name = $1
 	`
@@ -62,11 +62,12 @@ func (r *InventoryRepository) GetByName(InventoryName string) (*inventory.Invent
 func (r *InventoryRepository) UpdateColumn(ctx context.Context, inventoryID uuid.UUID, column string, value any) error {
 	// Whitelist column names
 	allowed := map[string]bool{
-		"name":     true,
-		"stock":    true,
-		"price":    true,
-		"unit":     true,
-		"location": true,
+		"name":           true,
+		"stock":          true,
+		"price_amount":   true,
+		"price_currency": true,
+		"unit":           true,
+		"location":       true,
 	}
 
 	if !allowed[column] {
@@ -91,7 +92,13 @@ func (r *InventoryRepository) UpdateColumn(ctx context.Context, inventoryID uuid
 }
 
 func (r *InventoryRepository) GetByCategory(ctx context.Context, category string) ([]inventory.Inventory, error) {
-	query := `SELECT * FROM inventories WHERE category = $1`
+	query := `
+	SELECT id, admin_id, name, category, stock,
+       price_amount AS "price.amount",
+       price_currency AS "price.currency",
+       images, unit, packaging, description, location, slug, created_at, updated_at
+	FROM inventories
+	WHERE category = $1`
 	rows, err := r.db.QueryContext(ctx, query, category)
 	if err != nil {
 		return nil, err
@@ -103,7 +110,7 @@ func (r *InventoryRepository) GetByCategory(ctx context.Context, category string
 		var inv inventory.Inventory
 		if err := rows.Scan(
 			&inv.ID, &inv.AdminID, &inv.Name, &inv.Category,
-			&inv.Stock, &inv.Price, &inv.Images, &inv.Unit,
+			&inv.Stock, &inv.Price.Amount, &inv.Price.Currency, &inv.Images, &inv.Unit,
 			&inv.Packaging, &inv.Description, &inv.Location,
 			&inv.CreatedAt, &inv.UpdatedAt,
 		); err != nil {
@@ -137,7 +144,7 @@ func (r *InventoryRepository) ListCategories(ctx context.Context) ([]string, err
 
 func (r *InventoryRepository) List(limit, offset int) ([]*inventory.Inventory, error) {
 	query := `
-		SELECT id, admin_id, name, category, stock, price, images, unit, packaging, description, location, slug, created_at, updated_at
+		SELECT id, admin_id, name, category, stock, price_amount AS "price.amount", price_currency AS "price.currency", images, unit, packaging, description, location, slug, created_at, updated_at
 		FROM inventories
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2
@@ -149,7 +156,7 @@ func (r *InventoryRepository) List(limit, offset int) ([]*inventory.Inventory, e
 
 func (r *InventoryRepository) GetBySlugs(adminSlug, productSlug string) (*inventory.Inventory, error) {
 	query := `
-		SELECT i.id, i.admin_id, i.name, i.category, i.stock, i.price, i.images, i.unit, i.packaging, i.description, i.location, i.slug
+		SELECT i.id, i.admin_id, i.name, i.category, i.stock, i.price_amount AS "price.amount", i.price_currency AS "price.currency", i.images, i.unit, i.packaging, i.description, i.location, i.slug
 		FROM inventories i
 		JOIN users u ON i.admin_id = u.id
 		WHERE i.slug = $1 AND u.slug = $2
@@ -179,7 +186,7 @@ func (r *InventoryRepository) GetStoreView(adminSlug string) (*inventory.StorePu
 
 	// Getting products for this admin
 	productQuery := `
-		SELECT name, price, unit, packaging, stock AS in_stock,
+		SELECT name, price_amount AS "price.amount", price_currency AS "price.currency", unit, packaging, stock AS in_stock,
 			(split_part(images, ',', 1)) AS image
 		FROM inventories i
 		JOIN users u ON i.admin_id = u.id
@@ -197,6 +204,17 @@ func (r *InventoryRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query := `DELETE FROM inventories WHERE id = $1`
 	_, err := r.db.ExecContext(ctx, query, id)
 	return err
+}
+
+func (r *InventoryRepository) GetAllInventories(ctx context.Context) ([]inventory.AllInventory, error) {
+	query := `
+        SELECT id, name
+        FROM inventories
+        ORDER BY name ASC
+    `
+	var inventories []inventory.AllInventory
+	err := r.db.Select(&inventories, query)
+	return inventories, err
 }
 
 // func GetColumnValues[T any](ctx context.Context, db *sqlx.DB, column string) ([]T, error) {

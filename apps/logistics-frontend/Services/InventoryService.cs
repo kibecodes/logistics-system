@@ -47,7 +47,7 @@ public class InventoryService
 
     public async Task<ServiceResult<List<Inventory>>> GetAllInventories()
     {
-        return await GetFromJsonSafe<List<Inventory>>("inventories/all_inventories");
+        return await GetFromJsonSafe<List<Inventory>>("inventories/all_inventories?limit=10&offset=0");
     }
 
     public async Task<ServiceResult<List<Inventory>>> GetInventoriesByCategory(string category)
@@ -61,10 +61,10 @@ public class InventoryService
         return await GetFromJsonSafe<List<string>>("inventories/categories");
     }
 
-    public async Task<string> DeleteInventory(Guid id)
+    public async Task<bool> DeleteInventory(Guid id)
     {
-        var res = await _http.DeleteFromJsonAsync<string>($"inventories/{id}");
-        return res ?? string.Empty;
+        var res = await _http.DeleteAsync($"inventories/{id}");
+        return res.IsSuccessStatusCode;
     }
 
 
@@ -94,7 +94,7 @@ public class InventoryService
         }
     }
 
-    private async Task<string> ParseError(HttpResponseMessage response)
+    public async Task<string> ParseError(HttpResponseMessage response)
     {
         try
         {
@@ -111,4 +111,5 @@ public class InventoryService
             return $"HTTP {(int)response.StatusCode} - {response.ReasonPhrase}";
         }
     }
+
 }

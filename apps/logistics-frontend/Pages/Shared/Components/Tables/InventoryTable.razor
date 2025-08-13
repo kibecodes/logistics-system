@@ -1,0 +1,58 @@
+@using logistics_frontend.Models.Inventory
+
+<table class="min-w-full table-auto text-sm text-left text-gray-700">
+    <thead class="bg-gray-50 text-xs uppercase text-gray-500 border-b"> 
+        <tr>
+            <th class="px-4 py-3">No.</th>
+            <th class="px-4 py-3">Inventories</th>
+            <th class="px-4 py-3">Category</th>
+            <th class="px-4 py-3">Stock</th>
+            <th class="px-4 py-3">Price</th>
+            <th class="px-4 py-3">Unit</th>
+            <th class="px-4 py-3">Updated At</th>
+            <th class="px-4 py-3 text-right">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (PagedInventories?.Any() == true)
+        {
+            @foreach (var (inventory, index) in PagedInventories.Select((o, i) => (o, i)))
+            {
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="px-4 py-2">@((index + 1) + (CurrentPage - 1) * PageSize)</td>
+                    <td class="px-4 py-2">@InventoryNames.GetValueOrDefault(inventory.ID, "Inventory")</td>
+                    <td class="px-4 py-2">@inventory.Category</td>
+                    <td class="px-4 py-2">@inventory.Stock</td>
+                    <td class="px-4 py-2">@inventory.Price.Amount</td>
+                    <td class="px-4 py-2">@inventory.Unit</td>
+                    <td class="px-4 py-2">@inventory.UpdatedAt.ToString("g")</td>
+                    <td class="px-4 py-2">
+                        <TableRowActions
+                            ColumnValueId="@inventory.ID"
+                            OnView="OnView"
+                            OnEdit="OnEdit"
+                            OnDelete="OnDelete"
+                        />
+                    </td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="8" class="text-center text-gray-500 py-4">No inventories found.</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter] public List<Inventory> PagedInventories { get; set; } = new();
+    [Parameter] public int CurrentPage { get; set; }
+    [Parameter] public int PageSize { get; set; }
+    [Parameter] public Dictionary<Guid, string> InventoryNames { get; set; } = new();
+    [Parameter] public Dictionary<Guid, string> CategoryNames { get; set; } = new();
+    [Parameter] public EventCallback<Guid> OnView { get; set; }
+    [Parameter] public EventCallback<Guid> OnEdit { get; set; }
+    [Parameter] public EventCallback<Guid> OnDelete { get; set; }
+}

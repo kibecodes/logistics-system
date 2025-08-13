@@ -160,7 +160,7 @@ func (h *InventoryHandler) ListInventories(w http.ResponseWriter, r *http.Reques
 
 	inventories, err := h.UC.List(r.Context(), limit, offset)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "Could not fetch orders", err)
+		writeJSONError(w, http.StatusInternalServerError, "Could not fetch inventories", err)
 		return
 	}
 

@@ -1,0 +1,42 @@
+<div class="flex justify-between items-center mt-4">
+    <button
+        class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+        @onclick="PreviousPage"
+        disabled="@(!HasPrevious)">
+        Previous
+    </button>
+
+    <span class="text-sm text-gray-600">
+        Page @CurrentPage of @TotalPages
+    </span>
+
+    <button
+        class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+        @onclick="NextPage"
+        disabled="@(!HasNext)">
+        Next
+    </button>
+</div>
+
+@code {
+    [Parameter] public int CurrentPage { get; set; }
+    [Parameter] public int TotalPages { get; set; }
+
+    [Parameter] public EventCallback OnPreviousPage { get; set; }
+    [Parameter] public EventCallback OnNextPage { get; set; }
+
+    private bool HasPrevious => CurrentPage > 1;
+    private bool HasNext => CurrentPage < TotalPages;
+
+    private async Task PreviousPage()
+    {
+        if (HasPrevious)
+            await OnPreviousPage.InvokeAsync(CurrentPage - 1);
+    }
+
+    private async Task NextPage()
+    {
+        if (HasNext)
+            await OnNextPage.InvokeAsync(CurrentPage + 1);
+    }
+}

@@ -287,6 +287,31 @@ definitions:
     - pickup_location
     - quantity
     type: object
+  order.Customer:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  order.DropdownDataRequest:
+    properties:
+      customers:
+        items:
+          $ref: '#/definitions/order.Customer'
+        type: array
+      inventories:
+        items:
+          $ref: '#/definitions/order.Inventory'
+        type: array
+    type: object
+  order.Inventory:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
   order.Order:
     properties:
       created_at:
@@ -1344,6 +1369,10 @@ paths:
             items:
               $ref: '#/definitions/order.Order'
             type: array
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
       security:
       - JWT: []
       summary: List all orders
@@ -1439,6 +1468,24 @@ paths:
       security:
       - JWT: []
       summary: Create a new order
+      tags:
+      - orders
+  /orders/form-data:
+    get:
+      description: Returns a list of customers and inventories for populating order
+        form dropdowns.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/order.DropdownDataRequest'
+        "500":
+          description: Failed to fetch customers or inventories
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Get data for order form dropdowns
       tags:
       - orders
   /payments/{id}:

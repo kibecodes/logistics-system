@@ -1,0 +1,72 @@
+<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+    <!-- Search -->
+    <input
+        type="text"
+        placeholder="Search..."
+        class="w-full pl-8 pr-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+        @bind="SearchTerm"
+        @* @bind-Value:event="SearchTermChanged" *@
+    />
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="lucide lucide-search absolute text-gray-400">
+        <path d="m21 21-4.34-4.34" />
+        <circle cx="11" cy="11" r="8" />
+    </svg>
+
+    <!-- Status Filter -->
+    <select 
+            @bind="StatusFilter"
+            @* @bind-Value:event="StatusFilterChanged" *@
+            class="w-full md:w-48 px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm text-gray-700">
+        <option value="">All Statuses</option>
+        <option value="pending">Pending</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+    </select>
+
+    <!-- Start Date -->
+    <input type="date"
+           @bind="StartDate"
+           @* @bind-Value:event="StartDateChanged" *@
+           class="w-full md:w-48 px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm text-gray-700" />
+
+    <!-- End Date -->
+    <input type="date"
+           @bind="EndDate"
+           @* @bind-Value:event="EndDateChanged" *@
+           class="w-full md:w-48 px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm text-gray-700" />
+</div>
+
+@code {
+    [Parameter]
+    public string SearchTerm { get; set; } = "";
+
+    [Parameter]
+    public EventCallback<string> SearchTermChanged { get; set; }
+
+    [Parameter]
+    public string StatusFilter { get; set; } = "";
+
+    [Parameter]
+    public EventCallback<string> StatusFilterChanged { get; set; }
+
+    [Parameter]
+    public DateTime? StartDate { get; set; }
+
+    [Parameter]
+    public EventCallback<DateTime?> StartDateChanged { get; set; }
+
+    [Parameter]
+    public DateTime? EndDate { get; set; }
+
+    [Parameter]
+    public EventCallback<DateTime?> EndDateChanged { get; set; }
+}

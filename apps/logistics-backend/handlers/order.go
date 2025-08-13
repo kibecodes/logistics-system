@@ -6,18 +6,18 @@ import (
 	"net/http"
 	"strings"
 
+	"logistics-backend/internal/application"
 	"logistics-backend/internal/domain/order"
-	usecase "logistics-backend/internal/usecase/order"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
 type OrderHandler struct {
-	UC *usecase.UseCase
+	UC *application.OrderService
 }
 
-func NewOrderHandler(uc *usecase.UseCase) *OrderHandler {
+func NewOrderHandler(uc *application.OrderService) *OrderHandler {
 	return &OrderHandler{UC: uc}
 }
 
@@ -42,7 +42,7 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 
 	o := req.ToOrder()
 
-	if err := h.UC.CreateOrder(r.Context(), o); err != nil {
+	if err := h.UC.Orders.UseCase.CreateOrder(r.Context(), o); err != nil {
 
 		switch err {
 		case order.ErrorOutOfStock:
@@ -89,7 +89,7 @@ func (h *OrderHandler) GetOrderByID(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "Invalid order ID", nil)
 		return
 	}
-	o, err := h.UC.GetOrder(r.Context(), id)
+	o, err := h.UC.Orders.UseCase.GetOrder(r.Context(), id)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "Order not found", err)
 		return
@@ -118,7 +118,7 @@ func (h *OrderHandler) GetOrderByCustomer(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	o, err := h.UC.GetOrderByCustomer(r.Context(), customerID)
+	o, err := h.UC.Orders.UseCase.GetOrderByCustomer(r.Context(), customerID)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "No orders found", err)
 		return
@@ -162,7 +162,7 @@ func (h *OrderHandler) UpdateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.UC.UpdateOrder(r.Context(), orderID, column, req.Value); err != nil {
+	if err := h.UC.Orders.UseCase.UpdateOrder(r.Context(), orderID, column, req.Value); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "Failed to update order", err)
 		return
 	}
@@ -181,9 +181,10 @@ func (h *OrderHandler) UpdateOrder(w http.ResponseWriter, r *http.Request) {
 // @Tags orders
 // @Produce  json
 // @Success 200 {array} order.Order
+// @Failure 500 {object} handlers.ErrorResponse "Internal server error"
 // @Router /orders/all_orders [get]
 func (h *OrderHandler) ListOrders(w http.ResponseWriter, r *http.Request) {
-	orders, err := h.UC.ListOrders(r.Context())
+	orders, err := h.UC.Orders.UseCase.ListOrders(r.Context())
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "Could not fetch orders", err)
 		return
@@ -213,7 +214,7 @@ func (h *OrderHandler) DeleteOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.UC.DeleteOrder(r.Context(), orderID); err != nil {
+	if err := h.UC.Orders.UseCase.DeleteOrder(r.Context(), orderID); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "Failed to delete order", err)
 		return
 	}
@@ -223,4 +224,22 @@ func (h *OrderHandler) DeleteOrder(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": fmt.Sprintf("order %s deleted", orderID),
 	})
+}
+
+// GetOrderFormData godoc
+// @Summary      Get data for order form dropdowns
+// @Description  Returns a list of customers and inventories for populating order form dropdowns.
+// @Tags         orders
+// @Produce      json
+// @Success      200  {object}  order.DropdownDataRequest
+// @Failure      500  {object}  ErrorResponse "Failed to fetch customers or inventories"
+// @Router       /orders/form-data [get]
+func (h *OrderHandler) GetOrderFormData(w http.ResponseWriter, r *http.Request) {
+	data, err := h.UC.GetCustomersAndInventories(r.Context())
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "Failed to fetch form data", err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(data)
 }

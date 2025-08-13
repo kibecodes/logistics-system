@@ -1,25 +1,40 @@
 @page "/admin/inventories"
 @layout MainLayout
 @inject InventoryService InventoryService
+@inject ToastService ToastService
 @using logistics_frontend.Models.Errors
+@using logistics_frontend.Models.Shared
+@using logistics_frontend.Pages.Shared.Components.Tables
+
 @inject NavigationManager Navigation
 
-<h3>Inventories</h3>
+<h2 class="text-2xl font-semibold text-gray-800 mb-6">All Inventories</h2>
 
-@if (!string.IsNullOrEmpty(PublicStoreUri))
-{
-    <div class="alert alert-info d-flex justify-content-between align-items-center">
-        <span>🔗 Your public store link: 
-            <a href="@PublicStoreUri" target="_blank">@PublicStoreUri</a>
-        </span>
-        <button class="btn btn-sm btn-outline-primary" @onclick="CopyStoreLink">Copy</button>
-    </div>
-}
+<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+    <!-- Search Field -->
+    <input
+        @bind="searchTerm"
+        type="text"
+        placeholder="Search by inventory name or category..."
+        class="w-full pl-8 pr-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+    />
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="lucide lucide-search absolute text-gray-400"
+    >
+        <path d="m21 21-4.34-4.34" />
+        <circle cx="11" cy="11" r="8" />
+    </svg>
 
-<!-- Category Filter -->
-<div class="mb-3">
-    <label for="categoryFilter">Filter by Category:</label>
-    <select id="categoryFilter" class="form-select w-auto d-inline-block ms-2"
+    <!-- Category Filter -->
+    <select id="categoryFilter" class="w-full md:w-48 px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm text-gray-700"
             @onchange="HandleCategoryFilter">
         <option value="">All Categories</option>
         @foreach (var category in Categories)
@@ -31,37 +46,54 @@
     </select>
 </div>
 
-<!-- Inventory Cards -->
+@if (!string.IsNullOrEmpty(PublicStoreUri))
+{
+    <div class="alert alert-info d-flex justify-content-between align-items-center">
+        <span>🔗 Your public store link: 
+            <a href="@PublicStoreUri" target="_blank">@PublicStoreUri</a>
+        </span>
+        <button class="btn btn-sm btn-outline-primary" @onclick="CopyStoreLink">Copy</button>
+    </div>
+}
+
 @if (IsLoading)
 {
     <p>Loading inventories ...</p>
 }
-else if (InventoryContents == null || InventoryContents.Count == 0)
-{
-    <p>No inventories found @(string.IsNullOrEmpty(SelectedCategory) ? "" : $"for category: {SelectedCategory}")</p>
-}
 else
 {
-    <div class="row">
-        @foreach (var item in InventoryContents)
-        {
-            <div class="col-md-6 mb-4">
-                <div class="card shadow-sm">
-                    <img 
-                        src="@item.Images.Split(',')[0]" 
-                        class="card-img-top" alt="@item.Name" 
-                        style="height: 180px; object-fit: cover;" 
-                    />
-                    <div class="card-body">
-                        <h5 class="card-title">@item.Name</h5>
-                        <p class="card-text">@item.Description</p>
-                        <p class="text-muted"><strong>Price:</strong> @item.Price.ToString("C") / @item.Unit</p>
-                        <p class="text-muted"><strong>Stock:</strong> @item.Stock</p>
-                        <p><span class="badge bg-secondary">@item.Category</span></p>
-                    </div>
-                </div>
-            </div>
-        }
+    <div class="overflow-x-auto bg-white shadow-sm border rounded-lg">
+        <!-- Inventory Table -->
+        <InventoryTable 
+            PagedInventories="inventories"
+            CurrentPage="currentPage"
+            PageSize="pageSize"
+            InventoryNames="inventoryNames"
+            CategoryNames="categoryNames"
+            OnView="ViewInventory"
+            OnEdit="EditInventory"
+            OnDelete="ConfirmDelete"
+        />
+
+        <!-- View & Edit Modal -->
+        <TableRowModal TModel="Inventory"
+            IsOpen="isEditModalOpen"
+            Model="editableInventory"
+            IsEditMode="isEditMode"
+            Close="CloseModal"
+            EnableEdit="@(() => isEditMode = true)"
+            Save="SaveChanges" 
+            Fields="inventoryFields"
+        />
+
+        <!-- Delete Modal -->
+        <DeleteConfirmationModal
+            IsVisible="isDeleteModalOpen"
+            IsVisibleChanged="@((bool value) => isDeleteModalOpen = value)"
+            Message="Delete this inventory?"
+            OnConfirm="DeleteInventory"
+        />
+
     </div>
 }
 
@@ -74,6 +106,20 @@ else
     [Inject] private UserSessionService SessionService { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
     private string? PublicStoreUri;
+    private Dictionary<Guid, string> inventoryNames = new();
+    private Dictionary<Guid, string> categoryNames = new();
+    private List<Inventory> allInventories = new();
+    private List<Inventory> inventories = new(); // what table uses
+    private string searchTerm = string.Empty;
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private Inventory? selectedInventory;
+    private Inventory? editableInventory = new();
+    private bool isEditModalOpen = false;
+    private bool isEditMode = false;
+    private bool isDeleteModalOpen = false;
+    private Guid inventoryToDeleteId;
+    private List<IFieldDefinitionBase> inventoryFields = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -89,6 +135,189 @@ else
         {
             PublicStoreUri = $"http://192.168.100.12:8080/api/public/store/{user.Slug}";
         }
+    }
+    private int TotalPages => (int)Math.Ceiling((double)inventories.Count() / pageSize);
+
+    private void BuildInventoryFields(Inventory inventory)
+    {
+        inventoryFields = new List<IFieldDefinitionBase>
+        {
+            new FieldDefinition<int>
+            {
+                Label = "Stock",
+                Type = "text",
+                Value = inventory.Stock,
+                ValueChanged = EventCallback.Factory.Create<int>(this, val => 
+                {
+                    inventory.Stock = val;
+                })
+            },
+
+            new FieldDefinition<string>
+            {
+                Label = "Price",
+                Type = "text",
+                Value = inventory.Price.Amount.ToString("0.00"),
+                ValueChanged = EventCallback.Factory.Create<string>(this, val => 
+                {
+                    if (decimal.TryParse(val, out var parsed))
+                    {
+                        inventory.Price.Amount = (long)(parsed * 100);
+                    }
+                })
+            },
+            new FieldDefinition<string>
+            {
+                Label = "Unit",
+                Type = "select",
+                Options = new List<string> { "kg", "pcs", "ltr" },
+                Value = inventory.Unit,
+                ValueChanged = EventCallback.Factory.Create<string>(this, val => 
+                {
+                    inventory.Unit = val;
+                })
+            }
+        };
+    }
+
+
+    private void ViewInventory(Guid id)
+    {
+        selectedInventory = inventories?.FirstOrDefault(i => i.ID == id);
+        if (selectedInventory is not null)
+        {
+            editableInventory = CloneInventory(selectedInventory);
+            BuildInventoryFields(editableInventory);
+            isEditMode = false;
+            isEditModalOpen = true;
+        }
+    }
+
+    private void EditInventory(Guid id)
+    {
+        selectedInventory = inventories?.FirstOrDefault(i => i.ID == id);
+        if (selectedInventory is not null)
+        {
+            editableInventory = CloneInventory(selectedInventory);
+            BuildInventoryFields(editableInventory);
+
+            isEditMode = true;
+            isEditModalOpen = true;
+        }
+    }
+
+    private Inventory CloneInventory(Inventory source)
+    {
+        return new Inventory
+        {
+            ID = source.ID,
+            Price = source.Price,
+            Unit = source.Unit,
+            Category = source.Category
+            // copy other props as needed
+        };
+    }
+
+    private void CloseModal()
+    {
+        isEditModalOpen = false;
+        selectedInventory = null;
+    }
+
+    private void OpenEditModal(Inventory inventory)
+    {
+        selectedInventory = inventory;
+        editableInventory = new Inventory
+        {
+            ID = inventory.ID,
+            Price = inventory.Price,
+            Unit = inventory.Unit,
+            Category = inventory.Category,
+            // Add other properties you want editable
+        };
+
+        isEditModalOpen = true;
+    }
+
+    private void ConfirmDelete(Guid id)
+    {
+        inventoryToDeleteId = id;
+        isDeleteModalOpen = true;   
+    }
+
+    private void CancelDelete()
+    {
+        isDeleteModalOpen = false;
+        inventoryToDeleteId = Guid.Empty;
+    }
+
+    private async Task DeleteInventory()
+    {
+        if (inventoryToDeleteId != Guid.Empty)
+        {
+            isDeleteModalOpen = true;
+            bool success = await InventoryService.DeleteInventory(inventoryToDeleteId);
+
+            if (success)
+            {
+                var result = await InventoryService.GetAllInventories();
+                if (result.Success && result.Data != null)
+                {
+                    inventories = result.Data;
+                    ToastService.ShowToast("Inventory deleted successfully", ToastService.ToastLevel.Success);
+                }
+            }
+            else
+            {
+                ToastService.ShowToast("Failed to delete inventory", ToastService.ToastLevel.Error);
+            }
+        }
+
+        isDeleteModalOpen = false;
+        inventoryToDeleteId = Guid.Empty;
+    }
+
+    private async Task SaveChanges()
+    {
+        if (selectedInventory == null || editableInventory == null)
+        return;
+
+        bool updated = false;
+
+        if (editableInventory.Price != selectedInventory.Price)
+        {
+            updated = true;
+        }
+
+        if (editableInventory.Unit != selectedInventory.Unit)
+        {
+            updated = true;
+        }
+
+        if (editableInventory.Category != selectedInventory.Category)
+        {
+            updated = true;
+        }
+
+        if (updated == true)
+        {
+            var result = await InventoryService.GetAllInventories();
+            if (result.Success && result.Data != null)
+            {
+                inventories = result.Data;
+                ToastService.ShowToast("Inventory updated successfully", ToastService.ToastLevel.Success);
+            }
+            else
+            {
+                ToastService.ShowToast("Failed to update inventory.", ToastService.ToastLevel.Error);
+            }
+        }
+        else
+        {
+            ToastService.ShowToast("No changes were made", ToastService.ToastLevel.Warning);
+        }
+
+        CloseModal();
     }
 
     private async Task CopyStoreLink()
@@ -106,48 +335,69 @@ else
     private async Task LoadAllInventories()
     {
         IsLoading = true;
-        ServiceResult<List<Inventory>> result;
+        var result = await InventoryService.GetAllInventories();
 
-        result = await InventoryService.GetAllInventories();
-        if (result.Success)
+        if (result.Success && result.Data != null)
         {
-            InventoryContents = result.Data!;
+            allInventories = result.Data;
+            ToastService.ShowToast("Inventories fetched successfully", ToastService.ToastLevel.Success);
+            ApplyFilters(); // show initial filtered list (unfiltered at first)
+
+            inventoryNames = allInventories.ToDictionary(
+                i => i.ID,
+                i => i.Name
+            );
         }
         else
         {
-            Console.WriteLine(result.ErrorMessage);
-            // toast error alert message
+            inventoryNames = new Dictionary<Guid, string>();
+            ToastService.ShowToast($"Failed to fetch inventories", ToastService.ToastLevel.Error);
+            Console.WriteLine($"Fetch Error: {result.ErrorMessage}");
         }
 
         IsLoading = false;
-    } 
+    }
 
-    private async Task HandleCategoryFilter(ChangeEventArgs e)
+    private void ApplyFilters()
+    {
+        IEnumerable<Inventory> filtered = allInventories;
+
+        // Category filter
+        if (!string.IsNullOrWhiteSpace(SelectedCategory))
+        {
+            filtered = filtered.Where(i => i.Category == SelectedCategory);
+        }
+
+        // Search filter
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filtered = filtered.Where(i => i.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Pagination
+        inventories = filtered
+            .Skip((currentPage - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+    }
+
+    private void HandleCategoryFilter(ChangeEventArgs e)
     {
         SelectedCategory = e.Value?.ToString() ?? string.Empty;
-        IsLoading = true;
+        currentPage = 1; // reset to first page
+        ApplyFilters();
+    }
 
-        ServiceResult<List<Inventory>> result;
+    private void HandleSearch(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? string.Empty;
+        currentPage = 1; // reset to first page
+        ApplyFilters();
+    }
 
-        if (string.IsNullOrWhiteSpace(SelectedCategory))
-        {
-            result = await InventoryService.GetAllInventories();
-        }
-        else
-        {
-            result = await InventoryService.GetInventoriesByCategory(SelectedCategory);
-        }
-
-        if (result.Success)
-        {
-            InventoryContents = result.Data!;
-        }
-        else
-        {
-            Console.WriteLine(result.ErrorMessage);
-            // toast error alert message
-        }
-
-        IsLoading = false;
+    private void ChangePage(int newPage)
+    {
+        currentPage = newPage;
+        ApplyFilters();
     }
 }

@@ -1,0 +1,17 @@
+<div class="flex items-center gap-2 justify-end">
+    <button class="text-blue-600 hover:underline" @onclick="View">View</button>
+    <button class="text-yellow-600 hover:underline" @onclick="Edit">Edit</button>
+    <button class="text-red-600 hover:underline" @onclick="Delete">Delete</button>
+</div>
+
+@code {
+    [Parameter] public Guid ColumnValueId { get; set; }
+
+    [Parameter] public EventCallback<Guid> OnView { get; set; }
+    [Parameter] public EventCallback<Guid> OnEdit { get; set; }
+    [Parameter] public EventCallback<Guid> OnDelete { get; set; }
+
+    private Task View() => OnView.InvokeAsync(ColumnValueId);
+    private Task Edit() => OnEdit.InvokeAsync(ColumnValueId);
+    private Task Delete() => OnDelete.InvokeAsync(ColumnValueId);
+}
