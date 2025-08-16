@@ -30,7 +30,7 @@
         toasts.Add(toast);
         StateHasChanged();
 
-        Task.Delay(4000).ContinueWith(_ =>
+        Task.Delay(2000).ContinueWith(_ =>
         {
             toasts.Remove(toast);
             InvokeAsync(StateHasChanged);

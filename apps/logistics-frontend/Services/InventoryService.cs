@@ -6,9 +6,17 @@ using logistics_frontend.Models.Inventory;
 public class InventoryService
 {
     private readonly HttpClient _http;
-    public InventoryService(IHttpClientFactory httpClientFactory)
+    private readonly ToastService _toastService;
+    private readonly DropdownDataService _dropdownService;
+    private List<Inventory>? _cachedInventories;
+    private List<string>? _cachedCategories;
+    private DateTime _lastFetchTime;
+    private readonly TimeSpan _cacheDuration = TimeSpan.FromMinutes(5);
+    public InventoryService(IHttpClientFactory httpClientFactory, DropdownDataService dropdownService, ToastService toastService)
     {
         _http = httpClientFactory.CreateClient("AuthenticatedApi");
+        _dropdownService = dropdownService;
+        _toastService = toastService;
     }
 
     public async Task<ServiceResult<HttpResponseMessage>> AddInventory(CreateInventoryRequest inventory)
@@ -18,6 +26,8 @@ public class InventoryService
             var response = await _http.PostAsJsonAsync("inventories/create", inventory);
             if (response.IsSuccessStatusCode)
             {
+                InvalidateCache();
+                _dropdownService.InvalidateCache();
                 return ServiceResult<HttpResponseMessage>.Ok(response);
             }
 
@@ -50,6 +60,36 @@ public class InventoryService
         return await GetFromJsonSafe<List<Inventory>>("inventories/all_inventories?limit=10&offset=0");
     }
 
+    public async Task<ServiceResult<List<Inventory>>> GetAllCachedInventories(bool forceRefresh = false)
+    {
+        if (!forceRefresh && _cachedInventories != null && DateTime.UtcNow - _lastFetchTime < _cacheDuration)
+        {
+            return ServiceResult<List<Inventory>>.Ok(_cachedInventories, fromCache: true);
+        }
+
+        var result = await GetAllInventories();
+        if (result.Success)
+        {
+            _cachedInventories = result.Data;
+            _lastFetchTime = DateTime.UtcNow;
+
+            _toastService.ShowToast("Inventories fetched successfully", ToastService.ToastLevel.Success);
+        }
+        else
+        {
+            _toastService.ShowToast($"Failed to fetch inventories", ToastService.ToastLevel.Error);
+            Console.WriteLine($"Fetch Error: {result.ErrorMessage}");
+        }
+
+        return result;
+    }
+
+    public void InvalidateCache()
+    {
+        _cachedInventories = null;
+        _cachedCategories = null;
+    }
+
     public async Task<ServiceResult<List<Inventory>>> GetInventoriesByCategory(string category)
     {
         var encodedCategory = Uri.EscapeDataString(category);
@@ -61,9 +101,30 @@ public class InventoryService
         return await GetFromJsonSafe<List<string>>("inventories/categories");
     }
 
+    public async Task<ServiceResult<List<string>>> GetCachedCategories(bool forceRefresh = false)
+    {
+        if (!forceRefresh && _cachedCategories != null && DateTime.UtcNow - _lastFetchTime < _cacheDuration)
+        {
+            return new ServiceResult<List<string>> { Success = true, Data = _cachedCategories };
+        }
+
+        var result = await GetCategories();
+        if (result.Success)
+        {
+            _cachedCategories = result.Data;
+            _lastFetchTime = DateTime.UtcNow;
+        }
+        return result;
+    }
+
     public async Task<bool> DeleteInventory(Guid id)
     {
         var res = await _http.DeleteAsync($"inventories/{id}");
+        if (res.IsSuccessStatusCode)
+        {
+            InvalidateCache();
+            _dropdownService.InvalidateCache();
+        }
         return res.IsSuccessStatusCode;
     }
 

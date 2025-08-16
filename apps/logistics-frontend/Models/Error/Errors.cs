@@ -11,8 +11,9 @@ namespace logistics_frontend.Models.Errors
         public bool Success { get; set; }
         public T? Data { get; set; }
         public string? ErrorMessage { get; set; }
+        public bool FromCache { get; set; }
 
-        public static ServiceResult<T> Ok(T data) => new() { Success = true, Data = data };
+        public static ServiceResult<T> Ok(T data, bool fromCache = false) => new() { Success = true, Data = data, FromCache = fromCache };
         public static ServiceResult<T> Fail(string message) => new() { Success = false, ErrorMessage = message };
     };
 }

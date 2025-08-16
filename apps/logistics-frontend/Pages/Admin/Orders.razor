@@ -4,6 +4,7 @@
 @using logistics_frontend.Models.Shared
 @using logistics_frontend.Pages.Shared.Components.Tables
 @inject OrderService OrderService
+@inject DropdownDataService DropdownDataService
 @inject ToastService ToastService
 @inject UserService UserService
 @inject AuthenticationStateProvider AuthProvider
@@ -214,23 +215,21 @@ else
     protected override async Task OnInitializedAsync()
     {
         // Get orders
-        var orderResult = await OrderService.GetAllOrders();
+        var orderResult = await OrderService.GetAllCachedOrders();
         if (orderResult.Success && orderResult.Data != null)
         {
             orders = orderResult.Data;
-            ToastService.ShowToast("Orders fetched successfully.", ToastService.ToastLevel.Success);
         }
         else
         {
             orders = new List<Order>();
-            ToastService.ShowToast("Failed to load orders.", ToastService.ToastLevel.Error);
         }
 
         // Get dropdown data (customers + inventories)
-        var dropdownResult = await OrderService.GetDropdownMenuData();
-        if (dropdownResult.Success && dropdownResult.Data != null)
+        var dropdownResult = await DropdownDataService.LoadCachedDropdownData();
+        if (dropdownResult.Success)
         {
-            var customers = dropdownResult.Data.Customers;
+            var customers = DropdownDataService.Customers;
 
             // Build dictionary mapping CustomerID → FullName
             customerNames = customers.ToDictionary(
@@ -241,7 +240,6 @@ else
         else
         {
             customerNames = new Dictionary<Guid, string>();
-            ToastService.ShowToast("Failed to load dropdown data.", ToastService.ToastLevel.Warning);
         }
     }
 

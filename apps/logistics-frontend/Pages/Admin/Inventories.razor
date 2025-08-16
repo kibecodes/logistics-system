@@ -125,7 +125,7 @@ else
     {
         ServiceResult<List<string>> result;
 
-        result = await InventoryService.GetCategories();
+        result = await InventoryService.GetCachedCategories();
         Categories = result.Data!;
         
         await LoadAllInventories();
@@ -335,12 +335,11 @@ else
     private async Task LoadAllInventories()
     {
         IsLoading = true;
-        var result = await InventoryService.GetAllInventories();
+        var result = await InventoryService.GetAllCachedInventories();
 
         if (result.Success && result.Data != null)
         {
             allInventories = result.Data;
-            ToastService.ShowToast("Inventories fetched successfully", ToastService.ToastLevel.Success);
             ApplyFilters(); // show initial filtered list (unfiltered at first)
 
             inventoryNames = allInventories.ToDictionary(
@@ -351,8 +350,6 @@ else
         else
         {
             inventoryNames = new Dictionary<Guid, string>();
-            ToastService.ShowToast($"Failed to fetch inventories", ToastService.ToastLevel.Error);
-            Console.WriteLine($"Fetch Error: {result.ErrorMessage}");
         }
 
         IsLoading = false;

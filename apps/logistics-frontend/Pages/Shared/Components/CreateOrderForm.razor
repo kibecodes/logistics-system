@@ -85,13 +85,13 @@
     private CreateOrderRequest order = new();
     private List<Customer> customers = new();
     private List<AllInventory> inventories = new();
-    [Inject] private OrderService.DropdownDataService DropdownService { get; set; } = default!;
+    [Inject] private DropdownDataService DropdownService { get; set; } = default!;
 
     private bool isSubmitting = false;
 
     protected override async Task OnInitializedAsync()
     {
-        await DropdownService.LoadIfEmptyAsync();
+        await DropdownService.LoadCachedDropdownData();
         customers = DropdownService.Customers;
         inventories = DropdownService.Inventories;
     }

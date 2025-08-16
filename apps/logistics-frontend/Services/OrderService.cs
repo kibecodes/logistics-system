@@ -5,9 +5,14 @@ using logistics_frontend.Models.Errors;
 public class OrderService
 {
     private readonly HttpClient _http;
-    public OrderService(IHttpClientFactory httpClientFactory)
+    private readonly ToastService _toastService;
+    private List<Order>? _cachedOrders;
+    private DateTime _lastFetchTime;
+    private readonly TimeSpan _cacheDuration = TimeSpan.FromMinutes(5);
+    public OrderService(IHttpClientFactory httpClientFactory, ToastService toastService)
     {
         _http = httpClientFactory.CreateClient("AuthenticatedApi");
+        _toastService = toastService;
     }
 
     public async Task<ServiceResult<HttpResponseMessage>> AddOrder(CreateOrderRequest order)
@@ -17,6 +22,7 @@ public class OrderService
             var response = await _http.PostAsJsonAsync("orders/create", order);
             if (response.IsSuccessStatusCode)
             {
+                InvalidateCache();
                 return ServiceResult<HttpResponseMessage>.Ok(response);
             }
 
@@ -62,6 +68,7 @@ public class OrderService
         var response = await _http.PutAsJsonAsync($"orders/{orderId}/update", requestBody);
         if (response.IsSuccessStatusCode)
         {
+            InvalidateCache();
             return await response.Content.ReadFromJsonAsync<Order>() ?? new Order();
         }
 
@@ -74,9 +81,42 @@ public class OrderService
         return await GetFromJsonSafe<List<Order>>("orders/all_orders");
     }
 
+    // cache orders
+    public async Task<ServiceResult<List<Order>>> GetAllCachedOrders(bool forceRefresh = false)
+    {
+        if (!forceRefresh && _cachedOrders != null && DateTime.UtcNow - _lastFetchTime < _cacheDuration)
+        {
+            return ServiceResult<List<Order>>.Ok(_cachedOrders, fromCache: true);
+        }
+
+        var result = await GetAllOrders();
+        if (result.Success)
+        {
+            _cachedOrders = result.Data;
+            _lastFetchTime = DateTime.UtcNow;
+
+            _toastService.ShowToast("Orders fetched successfully.", ToastService.ToastLevel.Success);
+        }
+        else
+        {
+            _toastService.ShowToast("Failed to load orders.", ToastService.ToastLevel.Error);
+        }
+
+        return result;
+    }
+
+    public void InvalidateCache()
+    {
+        _cachedOrders = null;
+    }
+
     public async Task<bool> DeleteOrder(Guid id)
     {
         var res = await _http.DeleteAsync($"orders/{id}");
+        if (res.IsSuccessStatusCode)
+        {
+            InvalidateCache();
+        }
         return res.IsSuccessStatusCode;
     }
 
@@ -120,32 +160,6 @@ public class OrderService
         catch (Exception ex)
         {
             return ServiceResult<T>.Fail($"Unexpected error: {ex.Message}");
-        }
-    }
-
-    // Cache service
-    public class DropdownDataService
-    {
-        public List<Customer> Customers { get; private set; } = new();
-        public List<AllInventory> Inventories { get; private set; } = new();
-
-        private readonly OrderService _orderService;
-        public DropdownDataService(OrderService orderService)
-        {
-            _orderService = orderService;
-        }
-
-        public async Task LoadIfEmptyAsync()
-        {
-            if (Customers.Count == 0 || Inventories.Count == 0)
-            {
-                var result = await _orderService.GetDropdownMenuData();
-                if (result.Success && result.Data != null)
-                {
-                    Customers = result.Data.Customers ?? new();
-                    Inventories = result.Data.Inventories ?? new();
-                }
-            }
         }
     }
 }
