@@ -14,17 +14,13 @@
             <div class="flex flex-row justify-between">
                 <InputField 
                     Label="Pickup Location"
-                    Value="@order.PickupLocation"
-                    ValueChanged="@((val) => order.PickupLocation = val)"
-                    ValueExpression="@(() => order.PickupLocation)"
+                    @bind-Value="order.PickupLocation"
                     Placeholder="e.g., Warehouse A" 
                 />
 
                 <InputField 
                     Label="Delivery Location" 
-                    Value="@order.DeliveryLocation"
-                    ValueChanged="@((val) => order.DeliveryLocation = val)"
-                    ValueExpression="@(() => order.DeliveryLocation)"
+                    @bind-Value="order.DeliveryLocation"
                     Placeholder="e.g., Customer Address" 
                 />
             </div>
@@ -35,8 +31,7 @@
                     Items="@customers"
                     GetValue="c => c.ID"
                     GetLabel="c => c.Name"
-                    SelectedId="@order.CustomerID"
-                    SelectedIdChanged="@((id) => order.CustomerID = id)"
+                    @bind-SelectedId="order.CustomerID"
                     Placeholder="Select Customer" 
                 />
             </div>
@@ -47,8 +42,7 @@
                     Items="@inventories"
                     GetValue="i => i.ID"
                     GetLabel="i => i.Name"
-                    SelectedId="@order.InventoryID"
-                    SelectedIdChanged="@((id) => order.InventoryID = id)"
+                    @bind-SelectedId="order.InventoryID"
                     Placeholder="Select Inventory" 
                 />
             </div>
@@ -59,7 +53,6 @@
                     min="1"
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-800" 
                 />
-
                 <ValidationMessage For="@(() => order.Quantity)" class="text-sm text-red-600 mt-1" />
             </div>
 
@@ -127,10 +120,19 @@
         try
         {
             isSubmitting = true;
-            await OrderService.AddOrder(order);
+            Console.WriteLine($"calling handle submit: {order}");
+            var result = await OrderService.AddOrder(order);
+            if (result.Success)
+            {
+                ClearForm();
+                ToastService.ShowToast("Order successfully created!", ToastService.ToastLevel.Success);
+                Navigation.NavigateTo("/orders");
+            }
+            else
+            {
+                ToastService.ShowToast("Failed to create order!", ToastService.ToastLevel.Success);
 
-            ToastService.ShowToast("Order successfully created!", ToastService.ToastLevel.Success);
-            Navigation.NavigateTo("/orders");
+            }
         }
         catch (Exception ex)
         {

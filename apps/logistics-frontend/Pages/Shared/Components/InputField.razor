@@ -2,11 +2,11 @@
 
 <div class="mb-3">
     <label class="block text-sm font-medium text-gray-700">@Label</label>
-    <InputText class="form-control w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-800"
-               Value="@Value"
-               ValueChanged="ValueChanged"
-               ValueExpression="ValueExpression"
-               placeholder="@Placeholder" />
+    <InputText 
+        class="form-control w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-800"
+        @bind-Value="Value"
+        Placeholder="@Placeholder"
+    />
     <ValidationMessage For="ValueExpression" class="text-red-600 text-sm mt-1" />
 </div>
 

@@ -1,3 +1,4 @@
+@using System.Linq.Expressions
 @typeparam TItem
 
 <InputSelect 
@@ -5,14 +6,14 @@
     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm 
         focus:outline-none focus:ring-2 focus:ring-blue-500 
         focus:border-blue-500 text-sm text-gray-800"
-    @bind-Value="@SelectedId">
+    @bind-Value="SelectedId">
 
-    <option disabled value="@Guid.Empty" selected>-- @Placeholder --</option>
+    <option disabled value="@Guid.Empty">-- @Placeholder --</option>
     @if (Items != null)
     {
         @foreach (var item in Items)
         {
-            <option value="@GetValue(item).ToString()">
+            <option value="@GetValue(item)">
                 @GetLabel(item)
             </option>
         }
