@@ -2,41 +2,69 @@ services:
   db:
     image: postgres:15
     container_name: logistics_postgres
-    ports:
-      - "5432:5432"
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: secret
       POSTGRES_DB: logistics_db
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d logistics_db"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    restart: always
 
   backend:
     build:
       context: .
       dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
-    depends_on:
-      - db
     env_file:
       - .env.docker
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    restart: always
   
   kong:
     image: kong:3.5
     depends_on:
-      - backend
-    ports:
-      - "8000:8000"   # Proxy (use this in Postman)
-      - "8001:8001"   # Admin API
+      backend:
+        condition: service_healthy   
     environment:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /etc/kong/kong.yml
       KONG_PROXY_ACCESS_LOG: /dev/stdout
       KONG_ADMIN_ACCESS_LOG: /dev/stdout
-      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_ADMIN_LISTEN: 127.0.0.1:8001  # Bind Admin API to loopback inside the container - localhost only
+    ports:
+      - "8000:8000"  # Public proxy
+    volumes:  
+      - ./kong/kong.yml:/etc/kong/kong.yml:ro
+    restart: always
+
+  caddy:
+    image: caddy:2
+    depends_on:
+      - kong
+    ports:
+      - "80:80"
+      - "443:443"
     volumes:
-      - ./kong/kong.yml:/etc/kong/kong.yml
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: always
 
 volumes:
   pgdata:
+  caddy_data:
+  caddy_config:
