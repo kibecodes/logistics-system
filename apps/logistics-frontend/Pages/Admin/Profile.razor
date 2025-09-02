@@ -1,0 +1,67 @@
+@page "/admin/profile"
+@using System.Security.Claims
+@using logistics_frontend.Models
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager Navigation
+
+<PageTitle>User Profile</PageTitle>
+
+<div class="max-w-3xl mx-auto mt-10 p-6 bg-white shadow-lg rounded-2xl">
+    <h2 class="text-2xl font-semibold font-poppins text-gray-800 mb-6">User Profile</h2>
+
+    <div class="flex items-center space-x-4 mb-6">
+        <img src="https://ui-avatars.com/api/?name=@UserFullName&background=FFA500&color=fff" 
+             alt="User Avatar" 
+             class="w-16 h-16 rounded-full shadow-md" />
+        <div>
+            <p class="text-lg font-semibold text-gray-800">@UserFullName</p>
+            <p class="text-sm text-gray-500">@UserRole</p>
+        </div>
+    </div>
+
+    <!-- Profile Details -->
+    <div class="space-y-4">
+        <div class="flex justify-between border-b pb-2">
+            <span class="text-gray-600 font-medium">Email</span>
+            <span class="text-gray-800">@UserEmail</span>
+        </div>
+        <div class="flex justify-between border-b pb-2">
+            <span class="text-gray-600 font-medium">Role</span>
+            <span class="text-gray-800">@UserRole</span>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="mt-6 flex space-x-4">
+        <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md">
+            Edit Profile
+        </button>
+        <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg shadow-md">
+            Change Password
+        </button>
+    </div>
+</div>
+
+@code {
+    private string UserFullName { get; set; } = string.Empty; 
+    private string UserEmail { get; set; } = string.Empty; 
+    private string UserRole { get; set; } = string.Empty;
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            UserFullName = user.FindFirst(ClaimTypes.Name).Value;
+            UserEmail = user.FindFirst(ClaimTypes.Email).Value;
+            UserRole = user.FindFirst(ClaimTypes.Role).Value;
+        }
+        else
+        {
+            UserFullName = "John Doe";
+            UserEmail = "johndoe@example.com";
+            UserRole = "Guest";
+        }
+    }
+}

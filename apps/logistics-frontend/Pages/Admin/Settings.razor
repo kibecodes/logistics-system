@@ -1,0 +1,45 @@
+@page "/admin/settings"
+
+<PageTitle>Settings</PageTitle>
+
+<div class="max-w-3xl mx-auto mt-10 p-6 bg-white shadow-lg rounded-2xl">
+    <h2 class="text-2xl font-semibold font-poppins text-gray-800 mb-4">Settings</h2>
+
+    <div class="space-y-6">
+        <!-- General Settings -->
+        <div>
+            <h3 class="text-lg font-medium text-gray-700 mb-2">General</h3>
+            <div class="flex items-center justify-between">
+                <label class="text-sm text-gray-600">Enable Notifications</label>
+
+                <!-- Toggle Switch -->
+                <button type="button"
+                        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ease-in-out focus:outline-none 
+                               @(notificationsEnabled ? "bg-green-500" : "bg-gray-300")"
+                        @onclick="ToggleNotifications">
+                    <span class="sr-only">Toggle Notifications</span>
+                    <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300 ease-in-out
+                                  @(notificationsEnabled ? "translate-x-6" : "translate-x-1")">
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Security Settings -->
+        <div>
+            <h3 class="text-lg font-medium text-gray-700 mb-2">Security</h3>
+            <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg shadow-md">
+                Change Password
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool notificationsEnabled = true;
+    private void ToggleNotifications()
+    {
+        notificationsEnabled = !notificationsEnabled;
+        // TODO: save preference to backend or local storage
+    }
+}

@@ -1,5 +1,7 @@
 @using logistics_frontend.Services.CustomAuthStateProvider
+@using Microsoft.AspNetCore.Components.Routing
 @inject CustomAuthStateProvider AuthProvider
+@using logistics_frontend.Models.Notification
 @inject NavigationManager Navigation
 
 <nav class="fixed top-0 left-0 right-0 z-50 bg-white shadow-md px-6 py-3 flex items-center justify-between max-w-7xl mx-auto">
@@ -11,34 +13,154 @@
   <!-- Right section (User + Actions) -->
   <div class="flex items-center space-x-4">
       <!-- Notifications -->
-      <button class="relative text-gray-600 hover:text-orange-600">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bell-icon lucide-bell"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>
-          <span class="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full border border-white"></span>
+      <button class="relative text-gray-600 hover:text-orange-600" @onclick="ToggleNotifications">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" 
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" 
+          class="lucide lucide-bell">
+          <path d="M10.268 21a2 2 0 0 0 3.464 0"/>
+          <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>
+        </svg>
+
+        @if (UnreadCount > 0)
+        {
+          <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full shadow-md">
+            @UnreadCount
+          </span>
+        }
       </button>
+
+      <!-- Notifications Dropdown -->
+      @if (showNotifications)
+      {
+        <div class="absolute right-0 top-12 w-80 bg-white shadow-lg rounded-2xl border p-4 space-y-3 z-50">
+            <div class="flex justify-between items-center">
+              <h3 class="font-semibold text-gray-700">Notifications</h3>
+              <div class="flex items-center space-x-3">
+                <button class="text-xs text-orange-600 hover:underline" @onclick="MarkAllAsRead">
+                  Mark all as read
+                </button>
+                <button class="text-gray-400 hover:text-gray-600" @onclick="CloseDropdown">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" 
+                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+          @if (notifications.Any())
+          {
+            @foreach (var note in notifications.Take(5))
+            {
+              <div class="p-3 bg-gray-50 rounded-lg shadow-sm hover:bg-gray-100 cursor-pointer">
+                  <p class="text-sm text-gray-800">@note.Message</p>
+                  <span class="text-xs text-gray-500">@note.SentAt.ToShortTimeString()</span>
+              </div>
+            }
+          }
+          else
+          {
+            <p class="text-sm text-gray-500 text-center">No new notifications</p>
+          }
+
+          <!-- Footer link -->
+          <div class="border-t pt-2 text-center">
+              <NavLink href="/admin/notifications" class="text-sm text-blue-600 hover:underline">
+                  View all notifications
+              </NavLink>
+          </div>
+        </div>
+      }
 
       <!-- User avatar & name -->
-      <div class="flex items-center space-x-2">
-          <img src="https://ui-avatars.com/api/?name=@UserName&background=FFA500&color=fff" 
-                alt="User Avatar" 
-                class="w-8 h-8 rounded-full shadow-md" />
-          <span class="text-sm font-medium font-poppins text-gray-800">@UserName</span>
-      </div>
+      <div class="relative">
+          <button class="flex items-center space-x-2 focus:outline-none" @onclick="ToggleUserDropdown">
+              <img src="https://ui-avatars.com/api/?name=@UserName&background=FFA500&color=fff" 
+                  alt="User Avatar" 
+                  class="w-8 h-8 rounded-full shadow-md" />
+              <span class="text-sm font-medium font-poppins text-gray-800">@UserName</span>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" fill="none" 
+                  viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+          </button>
 
-      <!-- Logout Button -->
-      <button 
-        class="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-2 rounded transition focus:outline-none focus:ring-2 focus:ring-red-400"
-        @onclick="Logout">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-out-icon lucide-log-out"><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/></svg>
-      </button>
+          @if (showUserDropdown)
+          {
+            <div class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border p-2 z-50">
+              <NavLink 
+                href="/admin/profile" 
+                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md">
+                  View Profile
+              </NavLink>
+              <NavLink 
+                href="/admin/settings" 
+                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md">
+                  Settings
+              </NavLink>
+
+              <!-- Logout Button -->
+              <button class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md"
+                @onclick="Logout">
+                  Logout
+              </button>
+            </div>
+          }
+      </div>
   </div>
 </nav>
 
 @code {
-    [Parameter] 
-    public string? UserName { get; set; }
-    private async Task Logout()
-    {
-        await AuthProvider.SignOutAsync();
-        Navigation.NavigateTo("/auth/login");
-    }
+  [Parameter] 
+  public string? UserName { get; set; }
+  private bool showNotifications = false;
+  private bool showUserDropdown = false;
+  private int UnreadCount = 3; // example, bind this to your notifications list
+  private List<Notification> notifications = new()
+  {
+    new Notification { Message = "Driver A started a trip", SentAt = DateTime.Now.AddMinutes(-5) },
+    new Notification { Message = "Order #123 delivered successfully", SentAt = DateTime.Now.AddMinutes(-20) },
+    new Notification { Message = "New driver registered", SentAt = DateTime.Now.AddHours(-1) }
+  };
+
+  protected override void OnInitialized()
+  {
+    Navigation.LocationChanged += HandleLocationChanged;
+  }
+
+  private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
+  {
+    showNotifications = false;
+    showUserDropdown = false;
+    StateHasChanged();
+  }
+  private void ToggleNotifications()
+  {
+    showNotifications = !showNotifications;
+  }
+
+  private void ToggleUserDropdown()
+  {
+    showUserDropdown = !showUserDropdown;
+  }
+
+  private void MarkAllAsRead()
+  {
+    UnreadCount = 0;
+    // also update your notifications list state
+
+    // Example: could update backend later
+    notifications.Clear();
+  }
+
+  private void CloseDropdown()
+  {
+    showNotifications = false;
+  }
+
+  private async Task Logout()
+  {
+    await AuthProvider.SignOutAsync();
+    Navigation.NavigateTo("/auth/login");
+  }
 }

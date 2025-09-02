@@ -1,0 +1,105 @@
+@page "/admin/notifications"
+
+<div class="max-w-4xl mx-auto px-6 py-6">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-semibold text-gray-800">Notifications</h1>
+        <button 
+            class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-md transition"
+            @onclick="MarkAllAsRead">
+            Mark all as read
+        </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex space-x-4 border-b border-gray-200 mb-4">
+        <button class="py-2 text-sm font-medium text-gray-700 border-b-2 border-orange-500">
+            All
+        </button>
+        <button class="py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+            Unread
+        </button>
+        <button class="py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+            Read
+        </button>
+    </div>
+
+    <!-- Notifications List -->
+    <div class="space-y-4">
+        @foreach (var notification in Notifications)
+        {
+            <div class="flex items-start space-x-3 p-4 rounded-lg border border-gray-200 
+                        hover:bg-gray-50 transition 
+                        @(notification.IsRead ? "opacity-70" : "bg-white")">
+
+                <!-- Icon (based on type) -->
+                <div class="flex-shrink-0">
+                    @if (notification.Type == "order")
+                    {
+                        <svg xmlns="http://www.w3.org/2000/svg" 
+                             class="h-6 w-6 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M3 3h18l-2 13H5L3 3z" />
+                        </svg>
+                    }
+                    else if (notification.Type == "driver")
+                    {
+                        <svg xmlns="http://www.w3.org/2000/svg" 
+                             class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M5 13l4 4L19 7" />
+                        </svg>
+                    }
+                </div>
+
+                <!-- Content -->
+                <div class="flex-1">
+                    <p class="text-sm text-gray-800">@notification.Message</p>
+                    <span class="text-xs text-gray-500">@notification.Timestamp.ToLocalTime().ToString("MMM dd, HH:mm")</span>
+                </div>
+
+                <!-- Actions -->
+                <button class="text-xs text-blue-600 hover:underline" 
+                        @onclick="() => MarkAsRead(notification.Id)">
+                    Mark as read
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    class NotificationModel
+    {
+        public int Id { get; set; }
+        public string Message { get; set; } = "";
+        public DateTime Timestamp { get; set; }
+        public bool IsRead { get; set; }
+        public string Type { get; set; } = "info"; // order, driver, system...
+    }
+
+    List<NotificationModel> Notifications = new();
+
+    protected override void OnInitialized()
+    {
+        // Example data
+        Notifications = new List<NotificationModel>
+        {
+            new NotificationModel { Id = 1, Message = "Driver John has picked up order #1234", Timestamp = DateTime.UtcNow.AddMinutes(-5), IsRead = false, Type = "driver" },
+            new NotificationModel { Id = 2, Message = "Order #5678 delivered successfully", Timestamp = DateTime.UtcNow.AddHours(-2), IsRead = true, Type = "order" },
+            new NotificationModel { Id = 3, Message = "New customer registered", Timestamp = DateTime.UtcNow.AddDays(-1), IsRead = false, Type = "system" }
+        };
+    }
+
+    void MarkAsRead(int id)
+    {
+        var notif = Notifications.FirstOrDefault(n => n.Id == id);
+        if (notif != null) notif.IsRead = true;
+    }
+
+    void MarkAllAsRead()
+    {
+        foreach (var n in Notifications)
+            n.IsRead = true;
+    }
+}
