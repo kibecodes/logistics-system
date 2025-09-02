@@ -2,6 +2,7 @@
 @layout MainLayout
 @attribute [Authorize(Roles = "admin")]
 @using logistics_frontend.Pages.Shared.Components
+@using logistics_frontend.Pages.Admin.LiveMap
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject ToastService ToastService
@@ -25,8 +26,8 @@
 
     <!-- Live Map -->
     <DashboardPanel Title="Live Driver Locations">
-        <div class="h-64 bg-white rounded flex items-center justify-center text-gray-400">
-            [Map Component Placeholder]
+        <div style="height: 16rem; width: 100%; border-radius: 0.5rem; overflow: hidden;">
+            <LiveMap />
         </div>
     </DashboardPanel>
 </div>
