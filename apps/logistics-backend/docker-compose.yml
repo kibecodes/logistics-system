@@ -6,6 +6,8 @@ services:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: secret
       POSTGRES_DB: logistics_db
+    ports: # migration purposes
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./backups:/backups
@@ -21,13 +23,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    ports: #postman access
+    - "8080:8080"
     env_file:
       - .env.docker
     depends_on:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      # test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
       interval: 1m30s
       timeout: 30s
       retries: 5
@@ -49,22 +54,22 @@ services:
       - "8000:8000"  # Public proxy
     volumes:  
       - ./kong/kong.yml:/etc/kong/kong.yml:ro
-    restart: always
+    # restart: always
 
-  caddy:
-    image: caddy:2
-    depends_on:
-      - kong
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    restart: always
+  # caddy:
+  #   image: caddy:2
+  #   depends_on:
+  #     - kong
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./Caddyfile:/etc/caddy/Caddyfile:ro
+  #     - caddy_data:/data
+  #     - caddy_config:/config
+  #   restart: always
 
 volumes:
   pgdata:
-  caddy_data:
-  caddy_config:
+  # caddy_data:
+  # caddy_config:

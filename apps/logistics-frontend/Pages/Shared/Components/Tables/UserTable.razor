@@ -1,0 +1,58 @@
+@using logistics_frontend.Models.User
+
+<table class="min-w-full table-auto text-sm text-left text-gray-700">
+    <thead class="bg-gray-50 text-xs uppercase text-gray-500 border-b">
+        <tr>
+            <th class="px-4 py-3">No.</th>
+            <th class="px-4 py-3">Name</th>
+            <th class="px-4 py-3">Role</th>
+            <th class="px-4 py-3">Status</th>
+            <th class="px-4 py-3">Last Login</th>
+            <th class="px-4 py-3">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (PagedUsers?.Any() == true)
+        {
+            @foreach (var (user, index) in PagedUsers.Select((u, i) => (u, i)))
+            {
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="px-4 py-2">@((index + 1) + (CurrentPage - 1) * PageSize)</td>
+                    <td class="px-4 py-2">@user.FullName</td>
+                    <td class="px-4 py-2">@user.Role</td>
+                    <td class="px-4 py-2">
+                        <span class="@GetStatusClass?.Invoke(user.Status)">
+                            @user.Status?.ToString()
+                        </span>
+                    </td>
+                    <td class="px-4 py-2">@user.LastLogin</td>
+                    <td class="px-4 py-2 text-right">
+                        <TableRowActions
+                            ColumnValueId="@user.ID"
+                            OnView="OnView"
+                            OnEdit="OnEdit"
+                            OnDelete="OnDelete"
+                        />
+                    </td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="6" class="text-center text-gray-500 py-4">No users found.</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter] public List<User> PagedUsers { get; set; } = new();
+    [Parameter] public int CurrentPage { get; set; }
+    [Parameter] public int PageSize { get; set; }
+    [Parameter] public EventCallback<Guid> OnView { get; set; }
+    [Parameter] public EventCallback<Guid> OnEdit { get; set; }
+    [Parameter] public EventCallback<Guid> OnDelete { get; set; }
+    [Parameter] public Func<UserStatus?, string> GetStatusClass { get; set; } = status => "";
+
+}

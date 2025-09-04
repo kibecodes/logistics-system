@@ -1113,6 +1113,167 @@ const docTemplate = `{
                 }
             }
         },
+        "/invites/all_invites": {
+            "get": {
+                "description": "Get all invites that are pending",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Invites"
+                ],
+                "summary": "List all pending invites",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/invite.Invite"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/invites/by-token": {
+            "get": {
+                "description": "Fetch an invite using a token",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Invites"
+                ],
+                "summary": "Get invite by token",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invite token",
+                        "name": "token",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/invite.Invite"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid Token",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Invite not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/invites/create": {
+            "post": {
+                "description": "Create a new invite for a user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Invites"
+                ],
+                "summary": "Create a new invite",
+                "parameters": [
+                    {
+                        "description": "Invite payload",
+                        "name": "invite",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/invite.CreateInviteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/invites/{id}": {
+            "delete": {
+                "description": "Delete an invite by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Invites"
+                ],
+                "summary": "Delete an invite",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invite ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid invite ID",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/notifications/all_notifications": {
             "get": {
                 "security": [
@@ -2442,7 +2603,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "price": {
-                    "type": "number"
+                    "$ref": "#/definitions/money.Money"
                 },
                 "slug": {
                     "type": "string"
@@ -2493,7 +2654,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "price": {
-                    "type": "number"
+                    "$ref": "#/definitions/money.Money"
                 },
                 "slug": {
                     "description": "product slug",
@@ -2527,7 +2688,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "price": {
-                    "type": "number"
+                    "$ref": "#/definitions/money.Money"
                 },
                 "unit": {
                     "type": "string"
@@ -2551,6 +2712,89 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/inventory.InventorySummary"
                     }
+                }
+            }
+        },
+        "invite.CreateInviteRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "expires_at",
+                "id",
+                "invited_by",
+                "role",
+                "token"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "invited_by": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/invite.Role"
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "invite.Invite": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "invited_by": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/invite.Role"
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "invite.Role": {
+            "type": "string",
+            "enum": [
+                "admin",
+                "driver",
+                "customer",
+                "guest"
+            ],
+            "x-enum-varnames": [
+                "Admin",
+                "Driver",
+                "Customer",
+                "Guest"
+            ]
+        },
+        "money.Money": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "currency": {
+                    "type": "string"
                 }
             }
         },
@@ -2736,7 +2980,10 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "amount": {
-                    "type": "number"
+                    "type": "integer"
+                },
+                "currency": {
+                    "type": "string"
                 },
                 "method": {
                     "$ref": "#/definitions/payment.PaymentMethod"
@@ -2753,7 +3000,10 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "amount": {
-                    "type": "number"
+                    "type": "integer"
+                },
+                "currency": {
+                    "type": "string"
                 },
                 "id": {
                     "type": "string"
@@ -2877,12 +3127,14 @@ const docTemplate = `{
             "enum": [
                 "admin",
                 "driver",
-                "customer"
+                "customer",
+                "guest"
             ],
             "x-enum-varnames": [
                 "Admin",
                 "Driver",
-                "Customer"
+                "Customer",
+                "Guest"
             ]
         },
         "user.UpdateDriverUserProfileRequest": {
@@ -2924,6 +3176,9 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "last_login": {
+                    "type": "string"
+                },
                 "must_change_password": {
                     "type": "boolean"
                 },
@@ -2937,10 +3192,28 @@ const docTemplate = `{
                     "description": "adminSlug used in public route",
                     "type": "string"
                 },
+                "status": {
+                    "$ref": "#/definitions/user.UserStatus"
+                },
                 "updated_at": {
                     "type": "string"
                 }
             }
+        },
+        "user.UserStatus": {
+            "type": "string",
+            "enum": [
+                "active",
+                "inactive",
+                "suspended",
+                "pending"
+            ],
+            "x-enum-varnames": [
+                "Active",
+                "Inactive",
+                "Suspended",
+                "Pending"
+            ]
         }
     },
     "securityDefinitions": {

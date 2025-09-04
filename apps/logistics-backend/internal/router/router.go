@@ -13,7 +13,17 @@ import (
 	authMiddleware "logistics-backend/internal/middleware"
 )
 
-func NewRouter(u *handlers.UserHandler, o *handlers.OrderHandler, d *handlers.DriverHandler, e *handlers.DeliveryHandler, p *handlers.PaymentHandler, f *handlers.FeedbackHandler, n *handlers.NotificationHandler, i *handlers.InventoryHandler, publicApiBaseUrl string) http.Handler {
+func NewRouter(
+	u *handlers.UserHandler,
+	o *handlers.OrderHandler,
+	d *handlers.DriverHandler,
+	e *handlers.DeliveryHandler,
+	p *handlers.PaymentHandler, f *handlers.FeedbackHandler,
+	n *handlers.NotificationHandler,
+	i *handlers.InventoryHandler,
+	publicApiBaseUrl string,
+	c *handlers.InviteHandler,
+) http.Handler {
 	r := chi.NewRouter()
 
 	// Enable Cors
@@ -61,6 +71,14 @@ func NewRouter(u *handlers.UserHandler, o *handlers.OrderHandler, d *handlers.Dr
 				r.Patch("/{id}/profile", u.UpdateUserProfile)
 				r.Put("/{id}/update", u.UpdateUser)
 				r.Delete("/{id}", u.DeleteUser)
+			})
+
+			// Invites
+			r.Route("/invites", func(r chi.Router) {
+				r.Post("/create", c.CreateMember)
+				r.Get("/by-token", c.GetMemberByToken)
+				r.Get("/all_invites", c.ListPendingMembers)
+				r.Delete("/{id}", c.DeleteMember)
 			})
 
 			// Orders

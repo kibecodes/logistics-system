@@ -1,48 +1,372 @@
 @page "/admin/users"
 @layout MainLayout
 @using logistics_frontend.Models.User
-@inject AuthenticationStateProvider AuthProvider
-@inject NavigationManager Navigation
+@using logistics_frontend.Models.Shared
+@using logistics_frontend.Pages.Shared.Components.Tables
 @inject UserService UserService
+@inject ToastService ToastService
 @attribute [Authorize(Roles = "admin")]
 
-<h3>👥 User Management</h3>
+<h2 class="text-2xl font-semibold text-gray-800 mb-6">User Management</h2>
+
+<!-- Top Actions -->
+<div class="flex items-center justify-between mb-4">
+    <div class="flex gap-2">
+        <button class="btn btn-primary" @onclick="OpenAddUser">+ Add User</button>
+        <button class="btn btn-outline" @onclick="ExportUsers">Export CSV</button>
+    </div>
+    <div>
+        <strong>Total Users:</strong> @users?.Count
+    </div>
+</div>
+
+<!-- Filters & Search -->
+<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+    <input 
+        type="text" 
+        class="w-full pl-8 pr-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500" 
+        placeholder="Search users..."
+        @bind="searchTerm" 
+        @bind:event="oninput" 
+    />
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="lucide lucide-search absolute text-gray-400"
+    >
+        <path d="m21 21-4.34-4.34" />
+        <circle cx="11" cy="11" r="8" />
+    </svg>
+
+    <select class="form-control w-full md:w-48 px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm text-gray-700" @bind="filterRole">
+        <option value="">All Roles</option>
+        <option value="@UserRoles.Admin">Admin</option>
+        <option value="@UserRoles.Driver">Driver</option>
+        <option value="@UserRoles.Customer">Customer</option>
+    </select>
+
+    <select class="form-control w-full md:w-48 px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm text-gray-700" @bind="filterStatus">
+        <option value="">All Status</option>
+        @foreach (var status in Enum.GetValues<UserStatus>())
+        {
+            <option value="@status">@status</option>
+        }
+    </select>
+</div>
 
 @if (users == null)
 {
-    <p><em>Loading users...</em></p>
+    <div class="text-gray-500">Loading users...</div>
+}
+else if (users.Count == 0)
+{
+    <div class="text-gray-600">No users found.</div>
 }
 else
 {
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>User ID</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var user in users)
-            {
-                <tr>
-                    <td>@user.ID</td>
-                    <td>@user.Email</td>
-                    <td>@user.Role</td>
-                    <td>
-                        <button class="btn btn-danger btn-sm">Delete</button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <div class="overflow-x-auto bg-white shadow-sm border rounded-lg">
+        <!-- Users Table -->
+        <UserTable
+            PagedUsers="users"
+            CurrentPage="currentPage"
+            PageSize="pageSize"
+            OnView="ViewUser"
+            OnEdit="EditUser"
+            OnDelete="ConfirmDelete"
+            GetStatusClass="GetUserStatusClass"
+        />
+
+        <!-- View & Edit Modal -->
+        <TableRowModal TModel="User"
+            IsOpen="isEditModalOpen"
+            Model="editableUser"
+            IsEditMode="isEditMode"
+            Close="CloseModal"
+            EnableEdit="@(() => isEditMode = true)"
+            Save="SaveChanges"
+            Fields="userFields"
+            
+        />
+
+        <!-- Delete Modal -->
+        <DeleteConfirmationModal 
+            IsVisible="isDeleteModalOpen"
+            IsVisibleChanged="@((bool value) => isDeleteModalOpen = value)"
+            Message="Delete this user?"
+            TargetName="@selectedUserName"
+            OnConfirm="DeleteUser"
+        />
+    </div>
+
+    <!-- Pagination -->
+    <PaginationControls
+        CurrentPage="@currentPage"
+        TotalPages="@TotalPages"
+        OnNextPage="NextPage"
+        OnPreviousPage="PrevPage" 
+    />
 }
 
 @code {
     private List<User>? users;
+    private string searchTerm = "";
+    private string filterRole = "";
+    private string filterStatus = "";
+    private Dictionary<Guid, bool> userSelections = new();
+
+    private User? selectedUser;
+    private User editableUser = new();
+    private bool isEditModalOpen = false;
+    private bool isEditMode = false;
+    private List<IFieldDefinitionBase> userFields = new();
+    private bool isDeleteModalOpen = false;
+    private Guid userToDeleteId;
+    private string selectedUserName = "";
+
+    // Pagination
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalPages => users == null ? 1 : (int)Math.Ceiling((double)users.Count / pageSize);
+    private bool CanPrev => currentPage > 1;
+    private bool CanNext => currentPage < totalPages;
+
     protected override async Task OnInitializedAsync()
     {
-        users = await UserService.GetAllUsers();
+        var result = await UserService.GetAllCachedUsers();
+        if (result.Success && result.Data != null)
+        {
+            users = result.Data;
+            userSelections = users.ToDictionary(u => u.ID, _ => false);
+        }
+        else
+        {
+            users = new List<User>();
+        }
     }
+
+    private IEnumerable<User> FilteredUsers =>
+        users?
+        .Where(u =>
+            (string.IsNullOrEmpty(searchTerm) || 
+             u.Email.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+             u.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrEmpty(filterRole) || u.Role == filterRole) &&
+            (string.IsNullOrEmpty(filterStatus) || u.Status.ToString() == filterStatus))
+        .Skip((currentPage - 1) * pageSize)
+        .Take(pageSize)
+        ?? Enumerable.Empty<User>();
+
+    private int TotalPages => (int)Math.Ceiling((double)FilteredUsers.Count() / pageSize);
+    private void NextPage()
+    {
+        if (currentPage < TotalPages)
+            currentPage++;
+    }
+    private void PrevPage()
+    {
+        if (currentPage > 1)
+            currentPage--;
+    }
+    private void BuildUserFields(User user)
+    {
+        userFields = new List<IFieldDefinitionBase>
+        {
+            new FieldDefinition<string>
+            {
+                Label = "FullName",
+                Type = "text",
+                Value = user.FullName,
+                ValueChanged = EventCallback.Factory.Create<string>(this, val => 
+                {
+                    user.FullName = val;
+                })
+            },
+
+            new FieldDefinition<string>
+            {
+                Label = "Email",
+                Type = "text",
+                Value = user.Email,
+                ValueChanged = EventCallback.Factory.Create<string>(this, val => 
+                {
+                    user.Email = val;
+                })
+            },
+
+            new FieldDefinition<UserStatus?>
+            {
+                Label = "Status",
+                Type = "select",
+                Value = user.Status,
+                Options = Enum.GetNames(typeof (UserStatus)).ToList(),
+                ValueChanged = EventCallback.Factory.Create<UserStatus?>(this, val => 
+                {
+                    user.Status = val;
+                })
+            }
+        };
+    }
+
+    private void ViewUser(Guid id)
+    {
+        selectedUser = users?.FirstOrDefault(o => o.ID == id);
+        if (selectedUser is not null)
+        {
+            editableUser = new User
+            {
+                ID = selectedUser.ID,
+                FullName = selectedUser.FullName,
+                Email = selectedUser.Email,
+                Status = selectedUser.Status,
+                LastLogin = selectedUser.LastLogin
+                // other fields
+            };
+            BuildUserFields(editableUser);
+
+            isEditMode = false;
+            isEditModalOpen = true;
+        }
+    }
+
+    private void EditUser(Guid id)
+    {
+        selectedUser = users?.FirstOrDefault(o => o.ID == id);
+        if (selectedUser is not null)
+        {
+            editableUser = new User
+            {
+                ID = selectedUser.ID,
+                FullName = selectedUser.FullName,
+                Email = selectedUser.Email,
+                Status = selectedUser.Status
+                // other fields
+            };
+            BuildUserFields(editableUser);
+
+            isEditMode = true;
+            isEditModalOpen = true;
+        }
+    }
+
+    private void CloseModal()
+    {
+        isEditModalOpen = false;
+        selectedUser = null;
+    }
+
+    private void ConfirmDelete(Guid id)
+    {
+        var user = users?.FirstOrDefault(u => u.ID == id);
+        if (user != null)
+        {
+            userToDeleteId = id;
+            selectedUserName = user.FullName;
+            isDeleteModalOpen = true;
+        }  
+    }
+
+    private void CancelDelete()
+    {
+        isDeleteModalOpen = false;
+        userToDeleteId = Guid.Empty;
+    }
+
+    private async Task SaveChanges()
+    {
+        if (selectedUser == null || editableUser == null)
+        return;
+
+        bool updated = false;
+
+        if (editableUser.FullName != selectedUser.FullName)
+            await UserService.UpdateUser(selectedUser.ID, "FullName", editableUser.FullName);
+            updated = true;
+
+        if (editableUser.Email != selectedUser.Email)
+            await UserService.UpdateUser(selectedUser.ID, "Email", editableUser.Email);
+            updated = true;
+        
+        if (editableUser.Status != selectedUser.Status && editableUser.Status != null)
+        {
+            await UserService.UpdateUser(selectedUser.ID, "Status", editableUser.Status);
+            updated = true;
+        }
+
+        if (updated)
+        {
+            var result = await UserService.GetAllUsers();
+            if (result.Success && result.Data != null)
+            {
+                users = result.Data;
+                ToastService.ShowToast("User updated successfully", ToastService.ToastLevel.Success);
+            }
+            else
+            {
+                ToastService.ShowToast("Failed to update user.", ToastService.ToastLevel.Error);
+            }
+        }
+        else
+        {
+            ToastService.ShowToast("No changes were made", ToastService.ToastLevel.Warning);
+        }
+
+        CloseModal();
+    }
+
+    private async Task DeleteUser()
+    {
+        if (userToDeleteId != Guid.Empty)
+        {
+            bool success = await UserService.DeleteUser(userToDeleteId);
+
+            if (success)
+            {
+                var result = await UserService.GetAllUsers();
+                if (result.Success && result.Data != null)
+                {
+                    users = result.Data;
+                    ToastService.ShowToast("User deleted successfully", ToastService.ToastLevel.Success);
+                }
+            }
+            else
+            {
+                ToastService.ShowToast("Failed to delete user", ToastService.ToastLevel.Error);
+            }
+        }
+
+        isDeleteModalOpen = false;
+        userToDeleteId = Guid.Empty;
+    }
+
+    private void ToggleStatus(User user)
+    {
+        user.Status = user.Status == UserStatus.Active ? UserStatus.Suspended : UserStatus.Active;
+        // TODO: call UserService.UpdateStatus(user.ID, user.Status);
+    }
+
+    private void ToggleSelectAll()
+    {
+        bool selectAll = userSelections.Values.Any(v => !v);
+        foreach (var key in userSelections.Keys.ToList())
+            userSelections[key] = selectAll;
+    }
+
+    private void OpenAddUser() { /* TODO */ }
+    private void ExportUsers() { /* TODO */ }
+
+    private string GetUserStatusClass(UserStatus? status) => status switch
+{
+    UserStatus.Active    => "text-green-600 bg-green-100 px-2 py-1 rounded text-xs font-medium",
+    UserStatus.Inactive  => "text-gray-600 bg-gray-100 px-2 py-1 rounded text-xs font-medium",
+    UserStatus.Suspended => "text-red-600 bg-red-100 px-2 py-1 rounded text-xs font-medium",
+    UserStatus.Pending   => "text-yellow-600 bg-yellow-100 px-2 py-1 rounded text-xs font-medium",
+    _ => "text-gray-600 bg-gray-100 px-2 py-1 rounded text-xs font-medium"
+};
+
 }

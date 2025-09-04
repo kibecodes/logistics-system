@@ -91,6 +91,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		"password":   u.PasswordHash,
 		"email":      u.Email,
 		"role":       u.Role,
+		"status":     u.Status,
 		"phone":      u.Phone,
 		"slug":       u.Slug,
 		"created_at": u.CreatedAt,
@@ -277,6 +278,15 @@ func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil || !u.ComparePassword(req.Password) {
 		writeJSONError(w, http.StatusUnauthorized, "Invalid credentials", err)
 		return
+	}
+
+	// Update last login
+	reqUpdate := &user.UpdateUserRequest{
+		Column: "last_login",
+		Value:  time.Now(),
+	}
+	if err := h.UC.UpdateUser(r.Context(), u.ID, reqUpdate); err != nil {
+		log.Printf("failed to update last login for user %s: %v", u.ID, err)
 	}
 
 	// Load the JWT secret from env

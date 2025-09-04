@@ -2,20 +2,51 @@ namespace logistics_frontend.Models.User;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
-public static class UserRoles {
+public static class UserRoles
+{
     public const string Admin = "admin";
     public const string Driver = "driver";
     public const string Customer = "customer";
+
+}
+
+public enum UserStatus
+{
+    Active,
+    Inactive,
+    Suspended,
+    Pending
 }
 
 public class User
 {
+    [JsonPropertyName("id")]
     public Guid ID { get; set; }
+
+    [JsonPropertyName("fullName")]
     public string FullName { get; set; } = string.Empty;
+
+    [JsonPropertyName("slug")]
     public string Slug { get; set; } = string.Empty;
+
+    [JsonPropertyName("email")]
     public string Email { get; set; } = string.Empty;
+
+    [JsonPropertyName("role")]
     public string Role { get; set; } = string.Empty;
+
+    [JsonPropertyName("phone")] 
+    public string? Phone { get; set; }
+
+    [JsonPropertyName("token")]
     public string? Token { get; set; }
+
+    [JsonPropertyName("status")]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public UserStatus? Status { get; set; }
+
+    [JsonPropertyName("last_login")]
+    public DateTime? LastLogin { get; set; }
 }
 
 public class RegisterModel

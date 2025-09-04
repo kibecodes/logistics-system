@@ -19,8 +19,8 @@ func NewUserRepository(db *sqlx.DB) user.Repository {
 
 func (r *UserRepository) Create(u *user.User) error {
 	query := `
-		INSERT INTO users (full_name, email, password_hash, role, phone, slug)
-		VALUES (:full_name, :email, :password_hash, :role, :phone, :slug)
+		INSERT INTO users (full_name, email, password_hash, role, status, phone, slug)
+		VALUES (:full_name, :email, :password_hash, :role, :status, :phone, :slug)
 		RETURNING id
 	`
 
@@ -56,10 +56,12 @@ func (r *UserRepository) UpdateProfile(ctx context.Context, id uuid.UUID, phone 
 
 func (r *UserRepository) UpdateColum(ctx context.Context, userID uuid.UUID, column string, value any) error {
 	allowed := map[string]bool{
-		"full_name": true,
-		"email":     true,
-		"phone":     true,
-		"role":      true,
+		"full_name":  true,
+		"email":      true,
+		"phone":      true,
+		"role":       true,
+		"status":     true,
+		"last_login": true,
 	}
 
 	if !allowed[column] {
@@ -84,21 +86,21 @@ func (r *UserRepository) UpdateColum(ctx context.Context, userID uuid.UUID, colu
 }
 
 func (r *UserRepository) GetByID(id uuid.UUID) (*user.User, error) {
-	query := `SELECT id, full_name, email, password_hash, role, phone, slug FROM users WHERE id = $1`
+	query := `SELECT id, full_name, email, password_hash, role, status, last_login, phone, slug FROM users WHERE id = $1`
 	var u user.User
 	err := r.db.Get(&u, query, id)
 	return &u, err
 }
 
 func (r *UserRepository) GetByEmail(email string) (*user.User, error) {
-	query := `SELECT id, full_name, email, password_hash, role, phone, slug FROM users WHERE email = $1`
+	query := `SELECT id, full_name, email, password_hash, role, status, last_login, phone, slug FROM users WHERE email = $1`
 	var u user.User
 	err := r.db.Get(&u, query, email)
 	return &u, err
 }
 
 func (r *UserRepository) List() ([]*user.User, error) {
-	query := `SELECT id, full_name, email, password_hash, role, phone, slug FROM users`
+	query := `SELECT id, full_name, email, password_hash, role, status, last_login, phone, slug FROM users`
 	var users []*user.User
 	err := r.db.Select(&users, query)
 	return users, err

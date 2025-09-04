@@ -196,11 +196,6 @@ else
         };
     }
 
-    private IEnumerable<Order> PagedOrders =>
-        FilteredOrders
-        .Skip((currentPage - 1) * pageSize)
-        .Take(pageSize);
-
     private int TotalPages => (int)Math.Ceiling((double)FilteredOrders.Count() / pageSize);
     private void NextPage()
     {
