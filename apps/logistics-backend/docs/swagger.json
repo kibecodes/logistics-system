@@ -881,7 +881,7 @@
                 }
             }
         },
-        "/inventories/by-id": {
+        "/inventories/by-id/{id}": {
             "get": {
                 "security": [
                     {
@@ -2845,6 +2845,7 @@
         "order.CreateOrderRequest": {
             "type": "object",
             "required": [
+                "admin_id",
                 "customer_id",
                 "delivery_location",
                 "inventory_id",
@@ -2852,6 +2853,9 @@
                 "quantity"
             ],
             "properties": {
+                "admin_id": {
+                    "type": "string"
+                },
                 "customer_id": {
                     "type": "string"
                 },
@@ -2900,6 +2904,9 @@
         "order.Inventory": {
             "type": "object",
             "properties": {
+                "admin_id": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -2911,6 +2918,9 @@
         "order.Order": {
             "type": "object",
             "properties": {
+                "admin_id": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },

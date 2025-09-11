@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 
 	// "fmt"
@@ -33,14 +35,17 @@ func (r *InventoryRepository) Create(i *inventory.Inventory) error {
 	return stmt.Get(&i.ID, i)
 }
 
-func (r *InventoryRepository) GetByID(InventoryID uuid.UUID) (*inventory.Inventory, error) {
+func (r *InventoryRepository) GetByID(id uuid.UUID) (*inventory.Inventory, error) {
 	query := `
 		SELECT id, admin_id, name, category, stock, price_amount AS "price.amount", price_currency AS "price.currency", images, unit, packaging, description, location, slug 
 		FROM inventories 
 		WHERE id = $1
 	`
 	var inventory inventory.Inventory
-	err := r.db.Get(&inventory, query, InventoryID)
+	err := r.db.Get(&inventory, query, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("inventory %s not found", id)
+	}
 	return &inventory, err
 }
 
@@ -208,7 +213,7 @@ func (r *InventoryRepository) Delete(ctx context.Context, id uuid.UUID) error {
 
 func (r *InventoryRepository) GetAllInventories(ctx context.Context) ([]inventory.AllInventory, error) {
 	query := `
-        SELECT id, name
+        SELECT id, name, admin_id
         FROM inventories
         ORDER BY name ASC
     `

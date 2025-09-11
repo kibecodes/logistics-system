@@ -1,0 +1,121 @@
+@using logistics_frontend.Models.User
+@using logistics_frontend.Pages.Shared.Components.InputField
+
+@inject UserService UserService
+@inject ToastService ToastService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthProvider 
+
+<EditForm Model="@user" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+
+    <div class="bg-white rounded-xl shadow p-6 max-w-xl mx-auto space-y-6">
+        <h3 class="text-2xl font-semibold text-gray-800">Create New User</h3>
+
+        <div class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <InputField
+                    Label="Full Name"
+                    Value="@user.FullName"
+                    ValueChanged="((string v) => user.FullName = v)"
+                    ValueExpression="@(() => user.FullName)"
+                    Placeholder="e.g., John Doe" 
+                />
+
+                <InputField
+                    Label="Email"
+                    Value="@user.Email"
+                    ValueChanged="((string v) => user.Email = v)"
+                    ValueExpression="@(() => user.Email)"
+                    Placeholder="e.g., johndoe@example.com" 
+                />
+
+                <InputField
+                    Label="Password"
+                    Value="@user.Password"
+                    ValueChanged="((string v) => user.Password = v)"
+                    ValueExpression="@(() => user.Password)"
+                    Placeholder="e.g., Pass1234" 
+                />
+
+                <InputField
+                    Label="Role"
+                    Value="@user.Role"
+                    ValueChanged="((string v) => user.Role = v)"
+                    ValueExpression="@(() => user.Role)"
+                    Placeholder="e.g., admin, customer, driver" 
+                />
+
+                <InputField
+                    Label="Phone"
+                    Value="@user.Phone"
+                    ValueChanged="((string v) => user.Phone = v)"
+                    ValueExpression="@(() => user.Phone)"
+                    Placeholder="e.g., 123456789" 
+                />
+            </div>
+
+            <div class="flex flex-row space-x-12">
+                <button 
+                    type="submit" 
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200" 
+                    disabled="@isSubmitting"
+                >
+                    @(isSubmitting ? "Creating..." : "Create User")
+                </button>
+
+                <button 
+                    class="w-full bg-gray-500 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
+                    @onclick="ClearForm"
+                >
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    private CreateUserRequest user = new();
+    private bool isSubmitting = false;
+
+    private async Task HandleValidSubmit()
+    {
+        Console.WriteLine("calling handle submit");
+
+        // log all values from the user model
+        Console.WriteLine($"FullName: {user.FullName}");
+        Console.WriteLine($"Email: {user.Email}");
+        Console.WriteLine($"Password: {user.Password}");
+        Console.WriteLine($"Role: {user.Role}");
+        Console.WriteLine($"Phone: {user.Phone}");
+
+        try
+        {
+            isSubmitting = true;
+            var result = await UserService.AddUser(user);
+            if (result.Success)
+            {
+                ClearForm();
+                ToastService.ShowToast("User successfully created!", ToastService.ToastLevel.Success);
+                Navigation.NavigateTo("admin/users");
+            }
+            else
+            {
+                ToastService.ShowToast("Failed to create user!", ToastService.ToastLevel.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowToast($"Failed to create user: {ex.Message}", ToastService.ToastLevel.Error);
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+    private void ClearForm()
+    {
+        user = new();
+    }
+}

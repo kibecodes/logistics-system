@@ -17,9 +17,30 @@ public class UserService
         _toastService = toastService;
     }
 
-    // Create User, Update User, Delete user
-    // invalidate dropdowndataservice cache when customer is created
-    // _dropdownService.InvalidateCache();
+    public async Task<ServiceResult<HttpResponseMessage>> AddUser(CreateUserRequest user)
+    {
+        try
+        {
+            var response = await _http.PostAsJsonAsync("public/create", user);
+            if (response.IsSuccessStatusCode)
+            {
+                InvalidateCache();
+                _dropdownService.InvalidateCache();
+                return ServiceResult<HttpResponseMessage>.Ok(response);
+            }
+
+            var error = await ParseError(response);
+            return ServiceResult<HttpResponseMessage>.Fail(error);
+        }
+        catch (HttpRequestException ex)
+        {
+            return ServiceResult<HttpResponseMessage>.Fail($"Network error: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<HttpResponseMessage>.Fail($"Unexpected error: {ex.Message}");
+        }
+    }
 
     public async Task<User> GetUserByID(Guid id)
     {

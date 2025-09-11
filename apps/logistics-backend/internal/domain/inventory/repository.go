@@ -11,7 +11,7 @@ type Repository interface {
 	GetByID(id uuid.UUID) (*Inventory, error)                      // GET method for fetching inventory by id.
 	GetByName(name string) (*Inventory, error)                     // GET method for fetching inventory by name.
 	List(limit, offset int) ([]*Inventory, error)                  // GET method for fetching all inventories - slice.
-	GetAllInventories(ctx context.Context) ([]AllInventory, error) // GET all inv name & ID without pagination.
+	GetAllInventories(ctx context.Context) ([]AllInventory, error) // GET all inv ID, Name & AdminID without pagination.
 	Delete(ctx context.Context, id uuid.UUID) error                // DELETE method to remove inventory by id.
 
 	GetByCategory(ctx context.Context, category string) ([]Inventory, error)                 // GET method for fetching inventories(slice) by category.

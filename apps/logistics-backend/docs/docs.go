@@ -884,7 +884,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/inventories/by-id": {
+        "/inventories/by-id/{id}": {
             "get": {
                 "security": [
                     {
@@ -2848,6 +2848,7 @@ const docTemplate = `{
         "order.CreateOrderRequest": {
             "type": "object",
             "required": [
+                "admin_id",
                 "customer_id",
                 "delivery_location",
                 "inventory_id",
@@ -2855,6 +2856,9 @@ const docTemplate = `{
                 "quantity"
             ],
             "properties": {
+                "admin_id": {
+                    "type": "string"
+                },
                 "customer_id": {
                     "type": "string"
                 },
@@ -2903,6 +2907,9 @@ const docTemplate = `{
         "order.Inventory": {
             "type": "object",
             "properties": {
+                "admin_id": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -2914,6 +2921,9 @@ const docTemplate = `{
         "order.Order": {
             "type": "object",
             "properties": {
+                "admin_id": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },

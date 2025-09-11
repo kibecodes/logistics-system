@@ -1,0 +1,8 @@
+
+@using logistics_frontend.Pages.Shared.Components
+
+@page "/admin/createuser"
+@layout MainLayout
+@attribute [Authorize(Roles = "admin")]
+
+<CreateUserForm />

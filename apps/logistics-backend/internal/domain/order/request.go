@@ -5,6 +5,7 @@ import (
 )
 
 type CreateOrderRequest struct {
+	AdminID          uuid.UUID `json:"admin_id" binding:"required"`
 	Quantity         int       `json:"quantity" binding:"required"`
 	InventoryID      uuid.UUID `json:"inventory_id" binding:"required"`
 	CustomerID       uuid.UUID `json:"customer_id" binding:"required"`
@@ -19,6 +20,7 @@ type UpdateOrderRequest struct {
 
 func (r *CreateOrderRequest) ToOrder() *Order {
 	return &Order{
+		AdminID:          r.AdminID,
 		Quantity:         r.Quantity,
 		InventoryID:      r.InventoryID,
 		CustomerID:       r.CustomerID,
@@ -41,6 +43,7 @@ type Customer struct {
 }
 
 type Inventory struct {
-	ID   uuid.UUID `db:"id" json:"id"`
-	Name string    `db:"name" json:"name"`
+	ID      uuid.UUID `db:"id" json:"id"`
+	Name    string    `db:"name" json:"name"`
+	AdminID uuid.UUID `db:"admin_id" json:"admin_id"`
 }

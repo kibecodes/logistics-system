@@ -1,12 +1,36 @@
+@typeparam TValue
 @using System.Linq.Expressions
+@namespace logistics_frontend.Pages.Shared.Components.InputField
 
-<div class="mb-3">
+<div class="form-group">
     <label class="block text-sm font-medium text-gray-700">@Label</label>
-    <InputText 
-        class="form-control w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-800"
-        @bind-Value="Value"
-        Placeholder="@Placeholder"
-    />
+
+
+    @if (typeof(TValue) == typeof(string))
+    {
+        <InputText
+            class="form-control w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm 
+                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+                    text-sm text-gray-800"
+            Value="@(Value as string)"
+            ValueChanged="EventCallback.Factory.Create<string?>(this, v => ValueChanged.InvokeAsync((TValue?)(object?)v))"
+            ValueExpression="@(ValueExpression as Expression<Func<string?>>)"
+            Placeholder="@Placeholder"
+        />
+    }
+    else if (typeof(TValue) == typeof(int) || typeof(TValue) == typeof(decimal) || typeof(TValue) == typeof(double))
+    {
+        <InputNumber TValue="TValue"
+            class="form-control w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm 
+                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+                   text-sm text-gray-800"
+            Value="@Value"
+            ValueChanged="ValueChanged"
+            ValueExpression="ValueExpression"
+            Placeholder="@Placeholder"
+        />
+    }
+    
     <ValidationMessage For="ValueExpression" class="text-red-600 text-sm mt-1" />
 </div>
 
@@ -14,8 +38,8 @@
     [Parameter] public string Label { get; set; } = string.Empty;
     [Parameter] public string? Placeholder { get; set; }
 
-    [Parameter] public string? Value { get; set; }
-    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    [Parameter] public TValue? Value { get; set; }
+    [Parameter] public EventCallback<TValue?> ValueChanged { get; set; }
 
-    [Parameter] public Expression<Func<string?>>? ValueExpression { get; set; }
+    [Parameter] public Expression<Func<TValue?>>? ValueExpression { get; set; }
 }

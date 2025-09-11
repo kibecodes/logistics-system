@@ -42,6 +42,7 @@ type InventorySummary struct {
 }
 
 type AllInventory struct {
-	ID   uuid.UUID `db:"id" json:"id"`
-	Name string    `db:"name" json:"name"`
+	ID      uuid.UUID `db:"id" json:"id"`
+	Name    string    `db:"name" json:"name"`
+	AdminID uuid.UUID `db:"admin_id" json:"admin_id"`
 }

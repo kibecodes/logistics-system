@@ -1,18 +1,34 @@
-# 🚚 logistics-system
+# FastaBiz 
 
-A scalable logistics & operations management system with clean APIs, Dockerized microservices, Kong API Gateway, JWT security, and automated API tests.
+FastaBiz helps businesses streamline **inventory, deliveries, and customer orders** — all in one platform. Whether you’re a farmer, shop owner, or everyday buyer, we provide a simple way to manage operations and connect with customers.
+
+---
+
+## ✨ Why FastaBiz?  
+
+Many small and medium businesses struggle with:  
+
+- ❌ Manual tracking of stock, orders, and deliveries  
+- ❌ Poor visibility into customer feedback & delivery status  
+- ❌ No central tool for both **business owners and buyers**  
+
+**FastaBiz solves this with an integrated platform**:  
+- 📦 Smart inventory management  
+- 🚚 Delivery & driver coordination  
+- 🛒 Customer ordering & tracking  
+- 📊 Dashboards for insights 
 
 ---
 
 ## 🚀 Features
 
-- 🔐 Role-based access control (Admin, Driver, Customer)
-- 📦 Full CRUD for orders, deliveries, drivers, payments, feedbacks, notifications
-- 🐳 Dockerized backend + Postgres + Kong Gateway
-- 🌐 Swagger documentation, served via Kong proxy
-- 🧪 Postman + Newman API tests in GitHub Actions CI
-- 🔑 Kong plugins: rate limiting & JWT auth
-- 🔜 Planned: gRPC/Kafka communication, frontend, production deployment
+- **Role-based access control**: Admin, Driver, Customer  
+- **Full CRUD APIs** for orders, deliveries, payments, feedback, notifications  
+- **Business storefronts**: Businesses get unique links to share their inventory  
+- **Customer tools**: Browse, order, track deliveries, review  
+- **Dockerized microservices**: Backend, DB, Kong API Gateway  
+- **Security**: JWT authentication, rate limiting via Kong  
+- **CI/CD ready**: GitHub Actions with API tests 
 
 ---
 
@@ -20,11 +36,12 @@ A scalable logistics & operations management system with clean APIs, Dockerized 
 
 | Layer       | Technologies                                 |
 |-------------|----------------------------------------------|
+| Frontend    | Blazor (C#), TailwindCSS                     |
 | Backend     | Go (Chi, Clean Architecture, Swagger)        |
 | Gateway     | Kong (JWT auth + rate limiting)              |
 | Database    | PostgreSQL                                   |
-| CI/CD       | GitHub Actions + Newman (Docker mode)        |
-| Containerization | Docker, Docker Compose                 |
+| CI/CD       | GitHub Actions + Docker + Postman/Newman     |
+| Containerization | Docker, Docker Compose                  |
 
 ---
 
@@ -33,20 +50,34 @@ A scalable logistics & operations management system with clean APIs, Dockerized 
 ```
 logistics-system/
 ├── apps/
-│   └── logistics-backend/       # Go APIs
-├── kong/
-│   └── kong.yml                 # Kong declarative config
-├── postman/
-│   ├── collection.json          # API test collection
-│   └── environment.json         # API test environment
-├── .github/
-│   └── workflows/
-│       └── api-tests.yml       # CI config
-├── .env.docker                  # Docker environment variables
-├── Dockerfile                   # Backend Dockerfile
-├── docker-compose.yml          # Compose services
-└── README.md
+│   ├── logistics-backend/        # Backend (Go APIs, infra & configs)
+│   │   ├── kong/                 # Kong declarative config
+│   │   │   └── kong.yml
+│   │   ├── postman/              # API test collections
+│   │   │   ├── collection.json
+│   │   │   └── environment.json
+│   │   ├── .github/              # CI workflows
+│   │   │   └── workflows/
+│   │   │       └── api-tests.yml
+│   │   ├── .env.docker           # Docker environment variables
+│   │   ├── Dockerfile            # Backend Dockerfile
+│   │   └── docker-compose.yml    # Compose services
+│   └── logistics-frontend/       # Frontend (Blazor app)
+├── .gitignore
+├── README.md
+└── LICENSE
+
 ```
+
+---
+
+## 🖼️ Project Flow (Business Use Case)  
+
+1️⃣ **Business Owners**: Register → Upload inventory → Share store link  
+2️⃣ **Customers**: Browse via link → Place orders → Track deliveries  
+3️⃣ **Admins/Drivers**: Manage deliveries, drivers, and feedback  
+
+*(Illustrations & screenshots will be added here — AI-generated concept images for now, real dashboard shots later.)*  
 
 ---
 
@@ -75,10 +106,14 @@ docker compose up --build
 
 ---
 
-### 🧪 Running Postman Tests Locally
+### 🧪 Testing APIs
 
 ```bash
-docker run --rm   -v "${PWD}/postman:/etc/newman"   postman/newman:alpine run collection.json   --environment=environment.json   --reporters cli
+docker run --rm \
+  -v "${PWD}/postman:/etc/newman" \
+  postman/newman:alpine run collection.json \
+  --environment=environment.json --reporters cli
+
 ```
 
 ---
@@ -99,36 +134,17 @@ Kong connects to the backend on `http://backend:8080` internally, while clients 
 
 ---
 
-## 🛡️ Kong Configuration
+## 📈 Roadmap
 
-- `/api/swagger` route: public + rate-limiting
-- `/api/*` route: JWT-protected + rate-limiting
-- Consumer `test-user` with JWT secret in `kong.yml`
+✅ Proof of Concept APIs
 
----
+🚧 Business logic for orders, drivers, routes
 
-## 🔐 JWT & Swagger
+🚧 Frontend dashboards for Admin, Driver, Customer
 
-Swagger UI uses `@securityDefinitions.apikey JWT`, allowing you to authorize with a valid token (issue via `/api/users/login`) to test protected endpoints interactively.
+🚧 gRPC/Kafka integration for async flows
 
----
-
-## 📈 CI with GitHub Actions
-
-The CI workflow (`.github/workflows/api-tests.yml`) uses:
-
-- Docker-based Newman to run Postman tests
-- Environment variables defined in `postman/environment.json`
-- Outputs test artifacts in JSON and HTML formats
-
----
-
-## ⏭️ Next Steps
-
-- Implement business logic: orders, drivers, routes
-- Integrate gRPC / Kafka for inter-service communication
-- Add frontend (ASP.NET or other)
-- Enable production CI/CD, monitoring, and deployment
+🚧 Production CI/CD & monitoring
 
 ---
 

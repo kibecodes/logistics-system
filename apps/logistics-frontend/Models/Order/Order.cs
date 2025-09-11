@@ -34,17 +34,23 @@ namespace logistics_frontend.Models.Order
     public class CreateOrderRequest
     {
         [Required]
-        public int Quantity { get; set; }
-        [Required]
-        public Guid InventoryID { get; set; }
-        [Required]
         public Guid AdminID { get; set; }
-        [Required]
-        public Guid CustomerID { get; set; }
-        [Required]
+
+        [Required(ErrorMessage = "Pickup location is required.")]
         public string PickupLocation { get; set; } = string.Empty;
-        [Required]
+
+        [Required(ErrorMessage = "Delivery location is required.")]
         public string DeliveryLocation { get; set; } = string.Empty;
+
+        [Required]
+        [Range(1, int.MaxValue, ErrorMessage = "Quantity must be at least 1.")]
+        public int Quantity { get; set; }
+
+        [Required(ErrorMessage = "Customer is required.")]
+        public Guid CustomerID { get; set; }
+
+        [Required(ErrorMessage = "Inventory is required.")]
+        public Guid InventoryID { get; set; }
     }
 
     public enum OrderStatus
@@ -79,5 +85,8 @@ namespace logistics_frontend.Models.Order
 
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("admin_id")]
+        public Guid AdminID { get; set; }
     }
 }

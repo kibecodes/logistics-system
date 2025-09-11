@@ -99,8 +99,8 @@ func main() {
 	paymentHandler := handlers.NewPaymentHandler(paymentUC)
 	feedbackHandler := handlers.NewFeedbackHandler(feedbackUC)
 	notificationHandler := handlers.NewNotificationHandler(notificationUC)
-	inventoryHandler := handlers.NewInventoryHandler(inventoryUC)
 	inviteHandler := handlers.NewInviteHandler(inviteUC)
+	inventoryHandler := handlers.NewInventoryHandler(orderService)
 
 	// Start server
 	r := router.NewRouter(

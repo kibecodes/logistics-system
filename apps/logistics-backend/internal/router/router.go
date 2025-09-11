@@ -96,7 +96,7 @@ func NewRouter(
 			r.Route("/inventories", func(r chi.Router) {
 				r.Post("/create", i.CreateInventory)
 				r.Get("/by-name", i.GetByInventoryName)
-				r.Get("/by-id", i.GetByInventoryID)
+				r.Get("/by-id/{id}", i.GetByInventoryID)
 				r.Get("/all_inventories", i.ListInventories)
 				r.Get("/by-category", i.GetInventoryByCategory)
 				r.Get("/categories", i.ListCategories)

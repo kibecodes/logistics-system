@@ -35,6 +35,7 @@ func (r *CreateUserRequest) ToUser() *User {
 		Role:         r.Role,
 		Phone:        r.Phone,
 		Slug:         baseSlug + "-" + uniqueSuffix,
+		Status:       Active,
 	}
 }
 
