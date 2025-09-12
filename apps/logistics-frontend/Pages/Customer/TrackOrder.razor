@@ -4,20 +4,49 @@
 @inject NavigationManager Navigation
 @attribute [Authorize(Roles = "customer")]
 
-<h3>📍 Track Your Order</h3>
+<div class="max-w-3xl mx-auto">
+    <!-- Page Heading -->
+    <h2 class="text-2xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
+        📍 Track Your Order
+    </h2>
 
-<div class="card p-3">
-    <p><strong>Order ID:</strong> ORD102</p>
-    <p><strong>Status:</strong> In Transit</p>
-    <p><strong>Driver:</strong> Jane Doe</p>
-    <p><strong>ETA:</strong> 3:00 PM</p>
-    <p><strong>Location:</strong> Near West Industrial Zone</p>
-</div>
+    <!-- Order Details Card -->
+    <div class="bg-white shadow-sm rounded-xl border p-6 space-y-4">
+        <!-- Order ID + Status -->
+        <div class="flex items-center justify-between">
+            <p class="text-gray-700 text-lg font-medium">
+                Order ID: <span class="font-semibold text-gray-900">ORD102</span>
+            </p>
+            <span class="px-3 py-1 text-sm font-semibold rounded-full bg-blue-100 text-blue-600">
+                In Transit
+            </span>
+        </div>
 
-<!-- Placeholder for map integration -->
-<div class="mt-4">
-    <em>📌 Map integration coming soon (live GPS tracking)</em>
+        <!-- Driver Info -->
+        <div class="flex items-center justify-between border-t pt-4">
+            <p class="text-gray-600">Driver</p>
+            <p class="font-medium text-gray-900">Jane Doe</p>
+        </div>
+
+        <!-- ETA -->
+        <div class="flex items-center justify-between border-t pt-4">
+            <p class="text-gray-600">Estimated Arrival</p>
+            <p class="font-medium text-gray-900">3:00 PM</p>
+        </div>
+
+        <!-- Location -->
+        <div class="flex items-center justify-between border-t pt-4">
+            <p class="text-gray-600">Current Location</p>
+            <p class="font-medium text-gray-900">West Industrial Zone</p>
+        </div>
+    </div>
+
+    <!-- Map Placeholder -->
+    <div class="mt-6 bg-gray-50 border border-dashed rounded-xl p-6 text-center text-gray-500">
+        📌 Map integration coming soon (live GPS tracking)
+    </div>
 </div>
 
 @code {
+    // Later you'll fetch order details dynamically via OrderService
 }

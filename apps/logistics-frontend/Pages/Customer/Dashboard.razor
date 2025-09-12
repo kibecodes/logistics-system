@@ -1,5 +1,85 @@
 @page "/customer/dashboard"
 @layout MainLayout
 @attribute [Authorize(Roles = "customer")]
+@using logistics_frontend.Pages.Shared.Components
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject ToastService ToastService
 
-<h3>🛍️ Customer Dashboard</h3>
+
+<!-- Quick Stats -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white p-6 rounded-2xl shadow hover:shadow-md transition">
+        <p class="text-sm text-gray-500">Active Orders</p>
+        <h3 class="text-2xl font-semibold text-blue-600">@ActiveOrdersCount</h3>
+    </div>
+    <div class="bg-white p-6 rounded-2xl shadow hover:shadow-md transition">
+        <p class="text-sm text-gray-500">Completed Orders</p>
+        <h3 class="text-2xl font-semibold text-green-600">@CompletedOrdersCount</h3>
+    </div>
+    <div class="bg-white p-6 rounded-2xl shadow hover:shadow-md transition">
+        <p class="text-sm text-gray-500">Pending Feedback</p>
+        <h3 class="text-2xl font-semibold text-yellow-600">@PendingFeedbackCount</h3>
+    </div>
+</div>
+
+<!-- Recent Orders -->
+<div class="bg-white p-6 rounded-2xl shadow mb-8">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold">📦 Recent Orders</h3>
+        <a href="/customer/myorders" class="text-blue-600 hover:underline">View All</a>
+    </div>
+
+    <table class="w-full text-sm">
+        <thead class="text-left text-gray-500 border-b">
+            <tr>
+                <th class="pb-2">Order ID</th>
+                <th class="pb-2">Status</th>
+                <th class="pb-2">ETA</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var order in RecentOrders)
+            {
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="py-2">@order.OrderCode</td>
+                    <td class="py-2">@order.Status</td>
+                    <td class="py-2">@order.Eta</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Quick Links -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <a href="/customer/trackorder" class="bg-blue-600 text-white p-6 rounded-2xl shadow hover:bg-blue-700 transition text-center">
+        🚚 Track Order
+    </a>
+    <a href="/customer/feedback" class="bg-green-600 text-white p-6 rounded-2xl shadow hover:bg-green-700 transition text-center">
+        ⭐ Give Feedback
+    </a>
+    <a href="/customer/payments" class="bg-purple-600 text-white p-6 rounded-2xl shadow hover:bg-purple-700 transition text-center">
+        💳 Manage Payments
+    </a>
+</div>
+
+@code {
+    private int ActiveOrdersCount = 2;
+    private int CompletedOrdersCount = 14;
+    private int PendingFeedbackCount = 1;
+
+    private List<OrderSummary> RecentOrders = new()
+    {
+        new OrderSummary { OrderCode = "ORD102", Status = "In Transit", Eta = "3:00 PM" },
+        new OrderSummary { OrderCode = "ORD101", Status = "Delivered", Eta = "Yesterday" },
+        new OrderSummary { OrderCode = "ORD100", Status = "Pending", Eta = "Tomorrow" },
+    };
+
+    class OrderSummary
+    {
+        public string OrderCode { get; set; }
+        public string Status { get; set; }
+        public string Eta { get; set; }
+    }
+}

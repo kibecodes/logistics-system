@@ -81,15 +81,6 @@
 
     private async Task HandleValidSubmit()
     {
-        Console.WriteLine("calling handle submit");
-
-        // log all values from the user model
-        Console.WriteLine($"FullName: {user.FullName}");
-        Console.WriteLine($"Email: {user.Email}");
-        Console.WriteLine($"Password: {user.Password}");
-        Console.WriteLine($"Role: {user.Role}");
-        Console.WriteLine($"Phone: {user.Phone}");
-
         try
         {
             isSubmitting = true;

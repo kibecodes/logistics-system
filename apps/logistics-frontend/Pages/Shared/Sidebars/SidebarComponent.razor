@@ -104,8 +104,11 @@
 
     private List<SidebarMenuItem> CustomerMenu => new()
     {
+        new("Dashboard", "/customer/dashboard", ""),
+        new("New Order", "/customer/neworder", "file-plus"),
         new("My Orders", "/customer/myorders", "files"),
         new("Rate Your Delivery", "/customer/feedback", "star"),
         new("Track Your Order", "/customer/trackorder", "route"),
+        new("Payments", "/customer/payments", "")
     };
 }

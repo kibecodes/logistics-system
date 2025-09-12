@@ -22,7 +22,9 @@
 
                         <!-- Main Content -->
                         <main class="flex-1 overflow-auto p-6 max-w-7xl mx-auto w-full">
-                            @ChildContent
+                            <CascadingValue Value="UserId">
+                                @ChildContent
+                            </CascadingValue>
                         </main>
                     </div>
                 </div>
@@ -47,6 +49,7 @@
     private bool IsReady;
     private bool IsSidebarCollapsed;
     private string? UserName;
+    private Guid? UserId;
 
     private void OnSidebarCollapseChanged(bool isCollapsed)
     {
@@ -60,11 +63,20 @@
 
         if (user.Identity?.IsAuthenticated == true)
         {
+            // Get ID claim
+            var idClaim = user.FindFirst(ClaimTypes.NameIdentifier)
+                   ?? user.FindFirst("sub"); // fallback if JWT style
+            
+            if (Guid.TryParse(idClaim?.Value, out var parsedGuid))
+            {
+                UserId = parsedGuid;
+            }
+
             // Try multiple claim types as fallbacks
             var nameClaim = user.FindFirst(ClaimTypes.Name)
                         ?? user.FindFirst("name")  // JWT/common alternative
                         ?? user.FindFirst(ClaimTypes.Email)
-                        ?? user.FindFirst(ClaimTypes.NameIdentifier); // e.g., username or ID
+                        ?? idClaim;
 
             var displayName = nameClaim?.Value?.Trim();
 
@@ -80,6 +92,7 @@
             else
             {
                 UserName = "User";
+                UserId = null;
             }
         }
         else

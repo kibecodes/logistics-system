@@ -1,54 +1,377 @@
 @page "/customer/myorders"
 @layout MainLayout
 @using logistics_frontend.Models.Order
+@using logistics_frontend.Models.Shared
+@using logistics_frontend.Pages.Shared.Components.Tables
+@inject OrderService OrderService
+@inject DropdownDataService DropdownDataService
+@inject ToastService ToastService
+@inject UserService UserService
 @inject AuthenticationStateProvider AuthProvider
 @inject NavigationManager Navigation
-@inject UserSessionService UserSession
-@inject OrderService OrderService
+@inject IJSRuntime JS
 @attribute [Authorize(Roles = "customer")]
 
-<h3>📦 My Orders</h3>
+<h2 class="text-2xl font-semibold text-gray-800 mb-6">My Orders</h2>
 
-@if (orders.Any())
+<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+    <input
+        @bind="searchTerm"
+        type="text"
+        placeholder="Search by pickup or delivery locations..."
+        class="w-full pl-8 pr-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+    />
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="lucide lucide-search absolute text-gray-400"
+    >
+        <path d="m21 21-4.34-4.34" />
+        <circle cx="11" cy="11" r="8" />
+    </svg>
+
+    <!-- Status Filter -->
+    <select 
+        @bind="statusFilter"
+        class="w-full md:w-48 px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm text-gray-700">
+        <option value="">All Statuses</option>
+        <option value="pending">Pending</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+    </select>
+
+    <!-- Start Date -->
+    <input
+        @bind="startDate"
+        type="date"
+        class="w-full md:w-48 px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm text-gray-700"
+    />
+
+    <!-- End Date -->
+    <input
+        @bind="endDate"
+        type="date"
+        class="w-full md:w-48 px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm text-gray-700"
+    />
+</div>
+@if (orders == null)
 {
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Order ID</th>
-                <th>Status</th>
-                <th>Pickup Location</th>
-                <th>Delivery Location</th>
-                <th>Updated At</th>
-                <th>Created At</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var o in orders)
-            {
-                <tr>
-                    <td>@o.ID</td>
-                    <td>@o.OrderStatus</td>
-                    <td>@o.PickupLocation</td>
-                    <td>@o.DeliveryLocation</td>
-                    <td>@o.UpdatedAt.ToString("g")</td>
-                    <td>@o.CreatedAt.ToString("g")</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <div class="text-gray-500">Loading orders...</div>
+}
+else if (orders.Count == 0)
+{
+    <div class="text-gray-600">No orders found.</div>
+}
+else
+{
+    <div class="overflow-x-auto bg-white shadow-sm border rounded-lg">
+        <!-- Orders Table -->
+        <CustOrderTable 
+            PagedOrders="orders"
+            CurrentPage="currentPage"
+            PageSize="pageSize"
+            OnView="ViewOrder"
+            OnEdit="EditOrder"
+            OnDelete="ConfirmDelete"
+            GetStatusClass="GetStatusClass"
+        />
+
+        <!-- View & Edit Modal -->
+        <TableRowModal TModel="Order"
+            IsOpen="isEditModalOpen"
+            Model="editableOrder"
+            IsEditMode="isEditMode"
+            Close="CloseModal"
+            EnableEdit="@(() => isEditMode = true)"
+            Save="SaveChanges"
+            Fields="orderFields"
+            
+        />
+
+         <!-- Delete Modal -->
+        <DeleteConfirmationModal 
+            IsVisible="isDeleteModalOpen"
+            IsVisibleChanged="@((bool value) => isDeleteModalOpen = value)"
+            Message="Delete this order?"
+            OnConfirm="DeleteOrder"
+        />
+    </div>
+
+    <!-- Pagination -->
+    <PaginationControls 
+        CurrentPage="@currentPage"
+        TotalPages="@TotalPages"
+        OnNextPage="NextPage"
+        OnPreviousPage="PrevPage"
+    />
 }
 
 @code {
-    private List<Order> orders = new();
+    [CascadingParameter] public Guid? UserId { get; set; }
+    private string searchTerm = "";
+    private string statusFilter = "";
+    private DateTime? startDate;
+    private DateTime? endDate;
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private Order? selectedOrder;
+    private Order editableOrder = new();
+    private bool isEditModalOpen = false;
+    private bool isEditMode = false;
+    private bool isDeleteModalOpen = false;
+    private Guid orderToDeleteId;
+    private List<Order>? orders;
+    private List<IFieldDefinitionBase> orderFields = new();
+
     protected override async Task OnInitializedAsync()
     {
-        var currentUser = await UserSession.GetUserAsync();
-        if (currentUser == null)
+        if (UserId.HasValue)
         {
-            Console.WriteLine("No user found in local storage");
-            return;
+            var result = await OrderService.GetOrdersByCustomer(UserId.Value);
+            if (result.Success && result.Data != null)
+            {
+                orders = result.Data;
+            }
+            else
+            {
+                orders = new List<Order>();
+            }
+        }
+        else
+        {
+            orders = new List<Order>();
+        }
+    }
+
+    private IEnumerable<Order> FilteredOrders =>
+    orders?
+    .Where(o =>
+        (string.IsNullOrWhiteSpace(searchTerm) ||
+         o.PickupLocation.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+         o.DeliveryLocation.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) &&
+        (string.IsNullOrWhiteSpace(statusFilter) ||
+         o.OrderStatus.ToString().Equals(statusFilter, StringComparison.OrdinalIgnoreCase)) &&
+        (!startDate.HasValue || o.CreatedAt.Date >= startDate.Value.Date) &&
+        (!endDate.HasValue || o.CreatedAt.Date <= endDate.Value.Date)
+    ) ?? Enumerable.Empty<Order>();
+
+    private void ViewOrder(Guid id)
+    {
+        selectedOrder = orders?.FirstOrDefault(o => o.ID == id);
+        if (selectedOrder is not null)
+        {
+            editableOrder = new Order
+            {
+                ID = selectedOrder.ID,
+                PickupLocation = selectedOrder.PickupLocation,
+                DeliveryLocation = selectedOrder.DeliveryLocation,
+                OrderStatus = selectedOrder.OrderStatus
+            };
+            BuildOrderFields(editableOrder);
+
+            isEditMode = false;
+            isEditModalOpen = true;
+        }
+    }
+
+    private void EditOrder(Guid id)
+    {
+        selectedOrder = orders?.FirstOrDefault(o => o.ID == id);
+        if (selectedOrder is not null)
+        {
+            editableOrder = new Order
+            {
+                ID = selectedOrder.ID,
+                PickupLocation = selectedOrder.PickupLocation,
+                DeliveryLocation = selectedOrder.DeliveryLocation,
+                OrderStatus = selectedOrder.OrderStatus
+            };
+            BuildOrderFields(editableOrder);
+
+            isEditMode = true;
+            isEditModalOpen = true;
+        }
+    }
+
+    private void CloseModal()
+    {
+        isEditModalOpen = false;
+        selectedOrder = null;
+    }
+
+    private void OpenEditModal(Order order)
+    {
+        selectedOrder = order;
+        editableOrder = new Order
+        {
+            ID = order.ID,
+            PickupLocation = order.PickupLocation,
+            DeliveryLocation = order.DeliveryLocation,
+            OrderStatus = order.OrderStatus,
+        };
+        BuildOrderFields(editableOrder);
+
+        isEditModalOpen = true;
+    }
+
+    private int TotalPages => (int)Math.Ceiling((double)FilteredOrders.Count() / pageSize);
+
+    private void NextPage()
+    {
+        if (currentPage < TotalPages)
+            currentPage++;
+    }
+    private void PrevPage()
+    {
+        if (currentPage > 1)
+            currentPage--;
+    }
+    private void BuildOrderFields(Order order)
+    {
+        orderFields = new List<IFieldDefinitionBase>
+        {
+            new FieldDefinition<string>
+            {
+                Label = "PickupLocation",
+                Type = "text",
+                Value = order.PickupLocation,
+                ValueChanged = EventCallback.Factory.Create<string>(this, val => 
+                {
+                    order.PickupLocation = val;
+                })
+            },
+
+            new FieldDefinition<string>
+            {
+                Label = "DeliveryLocation",
+                Type = "text",
+                Value = order.DeliveryLocation,
+                ValueChanged = EventCallback.Factory.Create<string>(this, val => 
+                {
+                    order.DeliveryLocation = val;
+                })  
+            }, 
+
+            new FieldDefinition<string>
+            {
+                Label = "OrderStatus",
+                Type = "select",
+                Value = order.OrderStatus.ToString(),
+                Options =  Enum.GetNames(typeof(OrderStatus)).ToList(),
+                ValueChanged = EventCallback.Factory.Create<string>(this, val => 
+                {
+                    if (Enum.TryParse<OrderStatus>(val, out var status))
+                    {
+                        order.OrderStatus = status;
+                    }
+                })
+            }
+        };
+    }
+
+    private async Task SaveChanges()
+    {
+        if (selectedOrder == null || editableOrder == null)
+        return;
+
+        bool updated = false;
+
+        if (editableOrder.PickupLocation != selectedOrder.PickupLocation)
+            await OrderService.UpdateOrder(selectedOrder.ID, "PickupLocation", editableOrder.PickupLocation);
+            updated = true;
+
+        if (editableOrder.DeliveryLocation != selectedOrder.DeliveryLocation)
+            await OrderService.UpdateOrder(selectedOrder.ID, "DeliveryLocation", editableOrder.DeliveryLocation);
+            updated = true;
+
+        if (editableOrder.OrderStatus != selectedOrder.OrderStatus)
+            await OrderService.UpdateOrder(selectedOrder.ID, "OrderStatus", editableOrder.OrderStatus);
+            updated = true;
+
+        if (updated)
+        {
+            if (UserId.HasValue)
+            {
+                var result = await OrderService.GetOrdersByCustomer(UserId.Value);
+                if (result.Success && result.Data != null)
+                {
+                    orders = result.Data;
+                    ToastService.ShowToast("Order updated successfully", ToastService.ToastLevel.Success);
+                }
+                else
+                {
+                    ToastService.ShowToast("Failed to update order.", ToastService.ToastLevel.Error);
+                }
+            }
+            else
+            {
+                orders = new List<Order>();   
+            }
+        }
+        else
+        {
+            ToastService.ShowToast("No changes were made", ToastService.ToastLevel.Warning);
         }
 
-        orders = await OrderService.GetOrdersByCustomer(currentUser.ID);
+        CloseModal();
     }
+
+    private async Task DeleteOrder()
+    {
+        if (orderToDeleteId != Guid.Empty)
+        {
+            bool success = await OrderService.DeleteOrder(orderToDeleteId);
+
+            if (success)
+            {
+                if (UserId.HasValue)
+                {
+                    var result = await OrderService.GetOrdersByCustomer(UserId.Value);
+                    if (result.Success && result.Data != null)
+                    {
+                        orders = result.Data;
+                        ToastService.ShowToast("Order deleted successfully", ToastService.ToastLevel.Success);
+                    }
+                }
+                else
+                {
+                    orders = new List<Order>();
+                }
+            }
+            else
+            {
+                ToastService.ShowToast("Failed to delete order", ToastService.ToastLevel.Error);
+            }
+        }
+
+        isDeleteModalOpen = false;
+        orderToDeleteId = Guid.Empty;
+    }
+
+    private void ConfirmDelete(Guid id)
+    {
+        orderToDeleteId = id;
+        isDeleteModalOpen = true;   
+    }
+
+    private void CancelDelete()
+    {
+        isDeleteModalOpen = false;
+        orderToDeleteId = Guid.Empty;
+    }
+
+    private string GetStatusClass(string status) => status.ToLower() switch
+    {
+        "pending" => "text-yellow-600 bg-yellow-100 px-2 py-1 rounded text-xs font-medium",
+        "completed" => "text-green-600 bg-green-100 px-2 py-1 rounded text-xs font-medium",
+        "cancelled" => "text-red-600 bg-red-100 px-2 py-1 rounded text-xs font-medium",
+        _ => "text-gray-600 bg-gray-100 px-2 py-1 rounded text-xs font-medium"
+    };
+
 }

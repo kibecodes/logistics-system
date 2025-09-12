@@ -1,0 +1,8 @@
+
+@using logistics_frontend.Pages.Shared.Components
+
+@page "/customer/neworder"
+@layout MainLayout
+@attribute [Authorize(Roles = "customer")]
+
+<CustOrderForm />

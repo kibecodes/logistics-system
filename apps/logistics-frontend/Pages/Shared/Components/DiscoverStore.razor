@@ -1,0 +1,62 @@
+@page "/stores"
+@layout PublicLayout
+
+<h2 class="text-2xl font-bold mb-6">🛍️ Discover Stores</h2>
+
+<!-- Filters/Search -->
+<div class="flex items-center justify-between mb-6">
+    <input type="text" placeholder="Search stores..."
+           class="px-4 py-2 border rounded-lg w-1/3 shadow-sm focus:ring-2 focus:ring-blue-500" />
+
+    <select class="px-4 py-2 border rounded-lg shadow-sm">
+        <option value="">All Categories</option>
+        <option value="fashion">Fashion</option>
+        <option value="electronics">Electronics</option>
+        <option value="food">Food & Beverage</option>
+        <option value="services">Services</option>
+    </select>
+</div>
+
+<!-- Store Directory Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    @foreach (var store in Stores)
+    {
+        <div class="bg-white rounded-2xl shadow hover:shadow-lg transition p-5">
+            <img src="@store.LogoUrl" alt="@store.Name" 
+                 class="h-24 w-24 object-cover rounded-full mx-auto" />
+            
+            <h3 class="text-lg font-semibold mt-4 text-center">@store.Name</h3>
+            <p class="text-gray-500 text-sm text-center">@store.Category</p>
+
+            <p class="text-gray-600 mt-2 text-center line-clamp-2">
+                @store.Description
+            </p>
+
+            <div class="mt-4 flex justify-center">
+                <a href="@($"/store/{store.Slug}")" 
+                   class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    Visit Store →
+                </a>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    // Mock data for now (replace with your backend later)
+    private List<StoreDto> Stores = new()
+    {
+        new StoreDto { Name = "FreshMart", Category = "Food & Beverage", Slug="freshmart", LogoUrl="/images/stores/freshmart.png", Description="Organic produce and groceries from local farmers." },
+        new StoreDto { Name = "TechWorld", Category = "Electronics", Slug="techworld", LogoUrl="/images/stores/techworld.png", Description="Latest gadgets and accessories for modern life." },
+        new StoreDto { Name = "UrbanWear", Category = "Fashion", Slug="urbanwear", LogoUrl="/images/stores/urbanwear.png", Description="Trendy clothing and streetwear for young professionals." },
+    };
+
+    class StoreDto
+    {
+        public string Name { get; set; }
+        public string Slug { get; set; }
+        public string Category { get; set; }
+        public string LogoUrl { get; set; }
+        public string Description { get; set; }
+    }
+}

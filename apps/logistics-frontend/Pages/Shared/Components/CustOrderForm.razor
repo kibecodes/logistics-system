@@ -38,19 +38,6 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Customers</label>
-                <GenericDropdown TItem="Customer"
-                    Items="@customers"
-                    GetValue="c => c.ID"
-                    GetLabel="c => c.Name"
-                    SelectedId="order.CustomerID"
-                    SelectedIdChanged="v => order.CustomerID = v"
-                    SelectedIdExpression="@(() => order.CustomerID)"
-                    Placeholder="Select Customer" 
-                />
-            </div>
-
-            <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Inventories</label>
                 <GenericDropdown TItem="AllInventory"
                     Items="@inventories"
@@ -82,8 +69,8 @@
 
 
 @code {
+    [CascadingParameter] public Guid? UserId { get; set; }
     private CreateOrderRequest order = new();
-    private List<Customer> customers = new();
     private List<AllInventory> inventories = new();
     [Inject] private DropdownDataService DropdownService { get; set; } = default!;
 
@@ -92,8 +79,17 @@
     protected override async Task OnInitializedAsync()
     {
         await DropdownService.LoadCachedDropdownData();
-        customers = DropdownService.Customers;
         inventories = DropdownService.Inventories;
+
+        if (UserId.HasValue)
+        {
+            order.CustomerID = UserId.Value;
+        }
+        else
+        {
+            ToastService.ShowToast("Please login to create an order.", ToastService.ToastLevel.Error);
+            return;
+        }
     }
     private void OnInventoryChanged(Guid inventoryId)
     {

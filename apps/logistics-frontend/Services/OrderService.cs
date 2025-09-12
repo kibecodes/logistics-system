@@ -41,15 +41,14 @@ public class OrderService
 
     public async Task<List<Order>> GetOrderByID(Guid id)
     {
-        var order = await _http.GetFromJsonAsync<List<Order>>($"orders/{id}");
+        var order = await _http.GetFromJsonAsync<List<Order>>($"orders/by-id/{id}");
         return order ?? new List<Order>();
     }
 
 
-    public async Task<List<Order>> GetOrdersByCustomer(Guid customerId)
+    public async Task<ServiceResult<List<Order>>> GetOrdersByCustomer(Guid customerId)
     {
-        var orders = await _http.GetFromJsonAsync<List<Order>>($"orders/{customerId}");
-        return orders ?? new List<Order>();
+        return await GetFromJsonSafe<List<Order>>($"orders/by-customer/{customerId}");
     }
 
     public async Task<ServiceResult<DropdownData>> GetDropdownMenuData()
