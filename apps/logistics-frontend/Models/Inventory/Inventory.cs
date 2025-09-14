@@ -23,8 +23,11 @@ namespace logistics_frontend.Models.Inventory
         [JsonPropertyName("stock")]
         public int Stock { get; set; }
 
-        [JsonPropertyName("price")]
-        public Money Price { get; set; } = new Money();
+        [JsonPropertyName("price_amount")]
+        public long PriceAmount { get; set; }
+
+        [JsonPropertyName("price_currency")]
+        public string PriceCurrency { get; set; } = string.Empty;
 
         [JsonPropertyName("images")]
         public string Images { get; set; } = string.Empty;
@@ -66,8 +69,11 @@ namespace logistics_frontend.Models.Inventory
         [Required(ErrorMessage = "Stock is required")]
         public int Stock { get; set; }
 
-        [Required(ErrorMessage = "Price is required")]
-        public float Price { get; set; }
+        [Required(ErrorMessage = "Price amount is required")]
+        public float PriceAmount { get; set; }
+
+        [Required(ErrorMessage = "Price currency is required")]
+        public string PriceCurrency { get; set; } = string.Empty;
 
         // [Required(ErrorMessage = "Images is required")]
         public string Images { get; set; } = string.Empty;

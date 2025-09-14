@@ -59,19 +59,20 @@ func (h *InventoryHandler) CreateInventory(w http.ResponseWriter, r *http.Reques
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]any{
-		"id":          i.ID,
-		"admin_id":    req.AdminID,
-		"name":        i.Name,
-		"category":    i.Category,
-		"stock":       i.Stock,
-		"price":       i.Price,
-		"images":      i.Images,
-		"unit":        i.Unit,
-		"packaging":   i.Packaging,
-		"description": i.Description,
-		"location":    i.Location,
-		"created_at":  i.CreatedAt,
-		"updated_at":  i.UpdatedAt,
+		"id":             i.ID,
+		"admin_id":       req.AdminID,
+		"name":           i.Name,
+		"category":       i.Category,
+		"stock":          i.Stock,
+		"price_amount":   i.PriceAmount,
+		"price_currency": i.PriceCurrency,
+		"images":         i.Images,
+		"unit":           i.Unit,
+		"packaging":      i.Packaging,
+		"description":    i.Description,
+		"location":       i.Location,
+		"created_at":     i.CreatedAt,
+		"updated_at":     i.UpdatedAt,
 	})
 }
 
