@@ -1,9 +1,11 @@
 @page "/admin/map"
 @namespace logistics_frontend.Pages.Admin.LiveMap
 
-<RealTimeMap @ref="realTimeMap" Parameters="parameters" 
-    height="calc(100vh - 6rem)" width="calc(100vw - 18rem)">
-</RealTimeMap>
+<div class="flex-1 overflow-hidden" style="height:calc(100vh - 4rem);">
+    <RealTimeMap @ref="realTimeMap" Parameters="parameters" 
+        height="calc(100vh - 6rem)" width="calc(100vw - 18rem)"
+    />
+</div>
 
 @code {
     static string openCycleMapAPIKey = "";

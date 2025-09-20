@@ -1,4 +1,6 @@
 @using logistics_frontend.Models.Inventory
+@using logistics_frontend.Pages.Shared.Components.InputField
+@using System.Text.Json
 @inject InventoryService InventoryService
 @inject ToastService ToastService
 @inject NavigationManager Navigation
@@ -11,72 +13,96 @@
         <h3 class="text-2xl font-semibold text-gray-800">Create New Inventory</h3>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InputField Label="Name" 
-                        Value="@inventory.Name" 
-                        ValueChanged="val => inventory.Name = val"
-                        ValueExpression="@(() => inventory.Name)"
-                        Placeholder="e.g., Organic Fertilizer" />
+            <InputField 
+                Label="Name" 
+                Value="@inventory.Name" 
+                ValueChanged="((string v) => inventory.Name = v)"
+                ValueExpression="@(() => inventory.Name)"
+                Placeholder="e.g., Fresh Milk" 
+            />
 
-            <InputField Label="Category"
-                        Value="@inventory.Category"
-                        ValueChanged="val => inventory.Category = val"
-                        ValueExpression="@(() => inventory.Category)"
-                        Placeholder="e.g., Manure & Fertilizer" />
+            <InputField 
+                Label="Category"
+                Value="@inventory.Category"
+                ValueChanged="((string v) => inventory.Category = v)"
+                ValueExpression="@(() => inventory.Category)"
+                Placeholder="e.g., Dairy" 
+            />
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Stock</label>
-                <InputNumber @bind-Value="inventory.Stock" min="1" 
-                             class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500" />
-                <small class="text-gray-500">Preview: @StockPreview</small>
-                <ValidationMessage For="@(() => inventory.Stock)" class="text-red-600 text-sm" />
-            </div>
+            <InputField 
+                Label="Stock"
+                Value="@inventory.Stock"
+                ValueChanged="((int v) => inventory.Stock = v)"
+                ValueExpression="@(() => inventory.Stock)"
+                Placeholder="e.g., 100" 
+            />
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Price (KES)</label>
-                <InputNumber @bind-Value="inventory.PriceAmount" step="0.01" min="0"
-                             class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500" />
-                <ValidationMessage For="@(() => inventory.PriceAmount)" class="text-red-600 text-sm" />
-            </div>
+            <InputField 
+                Label="Price (KES)"
+                Value="@inventory.PriceAmount"
+                ValueChanged="((long v) => inventory.PriceAmount = v)"
+                ValueExpression="@(() => inventory.PriceAmount)"
+                Placeholder="e.g., 50" 
+            />
 
             <!-- Unit Dropdown -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Unit</label>
-                <select class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
-                        @bind="selectedUnit">
-                    @foreach (var u in commonUnits)
-                    {
-                        <option value="@u">@u</option>
-                    }
-                </select>
-                @if (selectedUnit == "Other")
+                <GenericDropdown TItem="KeyValuePair<Guid, string>"
+                    Items="unitOptions.ToList()"
+                    GetValue="u => u.Key"
+                    GetLabel="u => u.Value"
+                    SelectedId="@selectedUnitId"
+                    SelectedIdChanged="OnUnitChanged"
+                    SelectedIdExpression="@(() => selectedUnitId)"
+                    Placeholder="Select Unit"
+                />
+                @if (chosenUnit == "Other")
                 {
-                    <input type="text" @bind="customUnit" placeholder="Enter custom unit"
-                           class="w-full mt-2 px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500" />
+                    <div class="mt-2">
+                        <InputField 
+                            Label="Custom Unit"
+                            Value="@customUnit"
+                            ValueChanged="((string v) => customUnit = v)"
+                            ValueExpression="@(() => customUnit)"
+                            Placeholder="Enter custom unit"
+                        />
+                    </div>
                 }
             </div>
 
             <!-- Packaging Dropdown -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Packaging</label>
-                <select class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
-                        @bind="selectedPackaging">
-                    @foreach (var p in commonPackaging)
-                    {
-                        <option value="@p">@p</option>
-                    }
-                </select>
-                @if (selectedPackaging == "Custom")
+                <GenericDropdown TItem="KeyValuePair<Guid, string>"
+                    Items="packagingOptions.ToList()"
+                    GetValue="p => p.Key"
+                    GetLabel="p => p.Value"
+                    SelectedId="@selectedPackagingId"
+                    SelectedIdChanged="OnPackagingChanged"
+                    SelectedIdExpression="@(() => selectedPackagingId)"
+                    Placeholder="Select Packaging" 
+                />
+
+                @if (chosenPackaging == "Custom")
                 {
-                    <input type="text" @bind="customPackaging" placeholder="Enter custom packaging"
-                           class="w-full mt-2 px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500" />
+                    <div class="mt-2">
+                        <InputField 
+                            Label="Custom Packaging"
+                            Value="@customPackaging"
+                            ValueChanged="((string v) => customPackaging = v)"
+                            ValueExpression="@(() => customPackaging)"
+                            Placeholder="Enter custom packaging" 
+                        />
+                    </div>
                 }
             </div>
-
-            <InputField Label="Location"
-                        Value="@inventory.Location"
-                        ValueChanged="val => inventory.Location = val"
-                        ValueExpression="@(() => inventory.Location)"
-                        Placeholder="e.g., Longnet" />
+            
+            <InputField 
+                Label="Location"
+                Value="@inventory.Location"
+                ValueChanged="((string v) => inventory.Location = v)"
+                ValueExpression="@(() => inventory.Location)"
+                Placeholder="e.g., Longnet" 
+            />
 
         </div>
 
@@ -90,15 +116,32 @@
 
         <!-- Images -->
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Images</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Images (min 3)</label>
             <InputFile OnChange="HandleImageSelected" multiple />
-            <div class="flex gap-2 mt-2 flex-wrap">
-                @foreach (var preview in imagePreviews)
+            <div class="flex gap-4 mt-4 flex-wrap">
+                @for (int i = 0; i < imagePreviews.Count; i++)
                 {
-                    <img src="@preview" class="h-20 w-20 object-cover rounded border" />
+                    <div class="relative">
+                        <img src="@imagePreviews[i]" 
+                            class="h-32 w-32 object-cover rounded-lg border shadow" />
+                        <button type="button" 
+                                class="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full hover:bg-red-700 transition"
+                                @onclick="() => RemoveImage(i)">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" 
+                                stroke-width="2" stroke="currentColor" class="h-5 w-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" 
+                                    d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
                 }
             </div>
+            @if (imagePreviews.Count < 3)
+            {
+                <p class="text-red-600 text-sm mt-2">Please upload at least 3 images.</p>
+            }
         </div>
+
 
         <!-- Actions -->
         <div class="flex gap-4">
@@ -115,38 +158,77 @@
 </EditForm>
 
 @code {
+    [CascadingParameter] public Guid? UserId { get; set; }
     private CreateInventoryRequest inventory = new();
     private bool isSubmitting = false;
     private List<string> imagePreviews = new();
     private List<IBrowserFile> selectedFiles = new();
 
-    private string selectedUnit = "kilos";
     private string? customUnit;
-    private string selectedPackaging = "70kg sack bag";
     private string? customPackaging;
+    private string? chosenUnit;
+    private string? chosenPackaging;
 
-    private List<string> commonUnits = new() { "litres", "kilos", "grams", "pieces", "per bag", "per bucket", "Other" };
-    private List<string> commonPackaging = new() { "single bottle", "carton of 12", "70kg sack bag", "5L jerrycan", "Custom" };
+    private readonly Dictionary<Guid, string> unitOptions = new()
+    {
+        { Guid.NewGuid(), "litres" },
+        { Guid.NewGuid(), "kilos" },
+        { Guid.NewGuid(), "grams" },
+        { Guid.NewGuid(), "pieces" },
+        { Guid.NewGuid(), "per bag" },
+        { Guid.NewGuid(), "per bucket" },
+        { Guid.NewGuid(), "Other" }
+    };
+    private Guid selectedUnitId = Guid.Empty;
 
-    private string StockPreview => $"{inventory.Stock} {(string.IsNullOrWhiteSpace(selectedPackaging) ? selectedUnit : selectedPackaging)}";
+    private readonly Dictionary<Guid, string> packagingOptions = new ()
+    {
+        { Guid.NewGuid(), "single bottle" },
+        { Guid.NewGuid(), "carton of 12" },
+        { Guid.NewGuid(), "70kg sack bag" },
+        { Guid.NewGuid(), "5L jerrycan" },
+        { Guid.NewGuid(), "Custom" },
+    };
+    private Guid selectedPackagingId = Guid.Empty;
+
+    private void OnUnitChanged(Guid id)
+    {
+        selectedUnitId = id;
+        chosenUnit = unitOptions.GetValueOrDefault(id, string.Empty);
+    }
+
+    private void OnPackagingChanged(Guid id)
+    {
+        selectedPackagingId = id;
+        chosenPackaging = packagingOptions.GetValueOrDefault(id, string.Empty);
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        var user = await SessionService.GetUserAsync();
-        if (user != null)
+        if (UserId.HasValue)
         {
-            inventory.AdminID = user.ID;
+            inventory.AdminID = UserId.Value;
+        }
+        else
+        {
+            ToastService.ShowToast("Please login to create an inventory.", ToastService.ToastLevel.Error);
+            return;
         }
     }
 
     private async Task HandleValidSubmit()
     {
-        inventory.Unit = selectedUnit == "Other" ? customUnit ?? "" : selectedUnit;
-        inventory.Packaging = selectedPackaging == "Custom" ? customPackaging ?? "" : selectedPackaging;
+        chosenUnit = unitOptions.GetValueOrDefault(selectedUnitId, string.Empty);
+        chosenPackaging = packagingOptions.GetValueOrDefault(selectedPackagingId, string.Empty);
 
-        if (imagePreviews.Count == 0)
+        inventory.Unit = chosenUnit == "Other" ? customUnit ?? "" : chosenUnit;
+        inventory.Packaging = chosenPackaging == "Custom" ? customPackaging ?? "" : chosenPackaging;
+
+        inventory.PriceCurrency = "KES";
+
+        if (imagePreviews.Count < 3)
         {
-            ToastService.ShowToast("Please upload at least one image.", ToastService.ToastLevel.Warning);
+            ToastService.ShowToast("Please upload at least 3 images.", ToastService.ToastLevel.Warning);
             return;
         }
 
@@ -154,6 +236,14 @@
         {
             isSubmitting = true;
             inventory.Images = string.Join(";", imagePreviews);
+
+            var json = JsonSerializer.Serialize(inventory, new JsonSerializerOptions
+            {
+                WriteIndented = true // pretty print
+            });
+
+            Console.WriteLine(json);
+
             var res = await InventoryService.AddInventory(inventory);
 
             if (res.Success)
@@ -174,10 +264,11 @@
 
     private async Task HandleImageSelected(InputFileChangeEventArgs e)
     {
-        selectedFiles.Clear();
-        imagePreviews.Clear();
         foreach (var file in e.GetMultipleFiles())
         {
+            if (selectedFiles.Count >= 10)
+                break;
+
             selectedFiles.Add(file);
             var buffer = new byte[file.Size];
             await file.OpenReadStream(5_000_000).ReadAsync(buffer);
@@ -186,13 +277,29 @@
         }
     }
 
+    private void RemoveImage(int index)
+    {
+        if (index >= 0 && index < imagePreviews.Count)
+        {
+            imagePreviews.RemoveAt(index);
+            selectedFiles.RemoveAt(index);
+        }
+    }
+
     private void ClearForm()
     {
-        inventory = new CreateInventoryRequest();
-        selectedUnit = "kilos";
-        selectedPackaging = "70kg sack bag";
+        inventory = new();       
+
+        selectedUnitId = Guid.Empty;
+        selectedPackagingId = Guid.Empty;
+        chosenUnit = null;
+        chosenPackaging = null;
         customUnit = null;
         customPackaging = null;
+
         imagePreviews.Clear();
+        selectedFiles.Clear();
+
+        StateHasChanged();
     }
 }

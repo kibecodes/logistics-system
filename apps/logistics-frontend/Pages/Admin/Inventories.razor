@@ -56,9 +56,13 @@
     </div>
 }
 
-@if (IsLoading)
+@if (allInventories == null)
 {
-    <p>Loading inventories ...</p>
+    <div class="text-gray-500">Loading inventories...</div>
+}
+else if (inventories.Count == 0)
+{
+    <div class="text-gray-600">No inventories found.</div>
 }
 else
 {

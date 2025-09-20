@@ -1,8 +1,9 @@
 @using System.Security.Claims
 @using logistics_frontend.Models
+@namespace logistics_frontend.Pages.Shared.Sidebars.SidebarComponent
 @inject AuthenticationStateProvider AuthProvider
 
-<div class="h-screen bg-white border-r shadow-sm transition-all duration-300 @(IsCollapsed ? "w-16" : "w-64")">
+<div class="min-h-screen bg-white border-r shadow-sm transition-all duration-300 @(IsCollapsed ? "w-16" : "w-64")">
     <!-- Header with toggle button -->
     <div class="flex items-center justify-between px-4 py-2 border-b">
         @if (!IsCollapsed)
@@ -92,6 +93,7 @@
         new("Inventories", "/admin/inventories", "layers"),
         new("Reports", "/admin/reports", "clipboard-minus"),
         new("Users", "/admin/users", "users"),
+        new("Create User", "/admin/createuser", ""),
         new("Map", "/admin/map", "")
     };
 

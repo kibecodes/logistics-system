@@ -18,15 +18,15 @@
 <!-- Trends & Live Map -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
     <!-- Trends Chart -->
-    <DashboardPanel Title="Order Trends (Last 7 Days)" Class="lg:col-span-2">
+    <DashboardPanel Title="Order Trends (Last 7 Days)">
         <div class="h-64 bg-gray-100 rounded flex items-center justify-center text-gray-400">
             [Chart Component Placeholder]
         </div>
     </DashboardPanel>
 
     <!-- Live Map -->
-    <DashboardPanel Title="Live Driver Locations">
-        <div style="height: 16rem; width: 100%; border-radius: 0.5rem; overflow: hidden;">
+    <DashboardPanel Title="Live Driver Locations" Class="lg:col-span-2">
+        <div style="height: 16rem; width: 100%; border-radius: 0.5rem; overflow: hidden;"> 
             <LiveMap />
         </div>
     </DashboardPanel>

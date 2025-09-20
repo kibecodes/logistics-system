@@ -73,7 +73,7 @@ else
     <div class="overflow-x-auto bg-white shadow-sm border rounded-lg">
         <!-- Users Table -->
         <UserTable
-            PagedUsers="users"
+            PagedUsers="FilteredUsers.ToList()"
             CurrentPage="currentPage"
             PageSize="pageSize"
             OnView="ViewUser"

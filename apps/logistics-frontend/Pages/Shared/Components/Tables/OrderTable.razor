@@ -6,6 +6,7 @@
             <th class="px-4 py-3">No.</th>
             <th class="px-4 py-3">Customers</th>
             <th class="px-4 py-3">Quantity</th>
+            <th class="px-4 py-3">Inventory</th>
             <th class="px-4 py-3">Pickup</th>
             <th class="px-4 py-3">Delivery</th>
             <th class="px-4 py-3">Status</th>
@@ -24,6 +25,9 @@
                         @CustomerNames.GetValueOrDefault(order.CustomerID, "Customer")
                     </td>
                     <td class="px-4 py-2">@order.Quantity</td>
+                    <td class="px-4 py-2">
+                        @InventoryCategories.GetValueOrDefault(order.InventoryID, "Uknown")
+                    </td>
                     <td class="px-4 py-2">@order.PickupLocation</td>
                     <td class="px-4 py-2">@order.DeliveryLocation</td>
                     <td class="px-4 py-2">
@@ -55,6 +59,7 @@
 @code {
     [Parameter] public List<Order> PagedOrders { get; set; } = new();
     [Parameter] public Dictionary<Guid, string> CustomerNames { get; set; } = new();
+    [Parameter] public Dictionary<Guid, string> InventoryCategories { get; set; } = new();
     [Parameter] public int CurrentPage { get; set; }
     [Parameter] public int PageSize { get; set; }
 

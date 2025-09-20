@@ -55,40 +55,51 @@ namespace logistics_frontend.Models.Inventory
     public class CreateInventoryRequest
     {
         [Required(ErrorMessage = "AdminID is required")]
+        [JsonPropertyName("admin_id")]
         public Guid AdminID { get; set; }
 
         [Required(ErrorMessage = "Name is required")]
+        [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
 
-        // [Required(ErrorMessage = "Slug is required")]
-        public string? Slug { get; set; }
-
         [Required(ErrorMessage = "Category is required")]
+        [JsonPropertyName("category")]
         public string Category { get; set; } = string.Empty;
 
+        [JsonPropertyName("slug")]
+        public string? Slug { get; set; }
+
         [Required(ErrorMessage = "Stock is required")]
+        [JsonPropertyName("stock")]
         public int Stock { get; set; }
 
         [Required(ErrorMessage = "Price amount is required")]
-        public float PriceAmount { get; set; }
+        [JsonPropertyName("price_amount")]
+        public long PriceAmount { get; set; }
 
-        [Required(ErrorMessage = "Price currency is required")]
-        public string PriceCurrency { get; set; } = string.Empty;
-
-        // [Required(ErrorMessage = "Images is required")]
-        public string Images { get; set; } = string.Empty;
+        // Default to KES
+        [JsonPropertyName("price_currency")]
+        public string PriceCurrency { get; set; } = "KES";
 
         [Required(ErrorMessage = "Unit is required")]
+        [JsonPropertyName("unit")]
         public string Unit { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Packaging is required")]
+        [JsonPropertyName("packaging")]
         public string Packaging { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Description is required")]
+        [JsonPropertyName("description")]
         public string Description { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Location is required")]
+        [JsonPropertyName("location")]
         public string Location { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Min of 3 images is required")]
+        [JsonPropertyName("images")]
+        public string Images { get; set; } = string.Empty;
 
     }
 
