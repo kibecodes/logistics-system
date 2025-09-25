@@ -10,54 +10,51 @@ import (
 )
 
 type DeliveryRepository struct {
-	db *sqlx.DB
+	exec sqlx.ExtContext
 }
 
-func NewDeliveryRepository(db *sqlx.DB) delivery.Repository {
-	return &DeliveryRepository{db: db}
+func NewDeliveryRepository(db *sqlx.DB) *DeliveryRepository {
+	return &DeliveryRepository{exec: db}
+	//flexible — can pass in either a *sqlx.DB or a *sqlx.Tx
 }
 
-// insert a delivery independently
-func (r *DeliveryRepository) Create(d *delivery.Delivery) error {
+func (r *DeliveryRepository) Create(ctx context.Context, d *delivery.Delivery) error {
 	query := `
 		INSERT INTO deliveries (order_id, driver_id, status)
 		VALUES (:order_id, :driver_id, :status)
 		RETURNING id
 	`
 
-	stmt, err := r.db.PrepareNamed(query)
+	rows, err := sqlx.NamedQueryContext(ctx, r.exec, query, d)
 	if err != nil {
-		return err
+		return fmt.Errorf("insert delivery: %w", err)
 	}
-	return stmt.Get(&d.ID, d)
+	defer rows.Close()
+
+	if rows.Next() {
+		if err := rows.Scan(&d.ID); err != nil {
+			return fmt.Errorf("scanning new delivery id: %w", err)
+		}
+	} else {
+		return fmt.Errorf("no id returned after scan")
+	}
+
+	return nil
 }
 
-func (r *DeliveryRepository) BeginTx(ctx context.Context) (*sqlx.Tx, error) {
-	return r.db.BeginTxx(ctx, nil)
-}
-
-// inside a transaction involving multiple steps - Creating delivery + updating order
-func (r *DeliveryRepository) CreateTx(ctx context.Context, tx *sqlx.Tx, d *delivery.Delivery) error {
+func (r *DeliveryRepository) GetByID(ctx context.Context, id uuid.UUID) (*delivery.Delivery, error) {
 	query := `
-		INSERT INTO deliveries (order_id, driver_id, status)
-		VALUES (:order_id, :driver_id, :status)
-		RETURNING id
+		SELECT id, order_id, driver_id, assigned_at, picked_up_at, delivered_at, status 
+		FROM deliveries 
+		WHERE id = $1
 	`
 
-	stmt, err := tx.PrepareNamedContext(ctx, query)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	return stmt.GetContext(ctx, &d.ID, d)
-}
-
-func (r *DeliveryRepository) GetByID(id uuid.UUID) (*delivery.Delivery, error) {
-	query := `SELECT id, order_id, driver_id, assigned_at, picked_up_at, delivered_at, status FROM deliveries WHERE id = $1`
 	var d delivery.Delivery
-	err := r.db.Get(&d, query, id)
-	return &d, err
+	if err := sqlx.GetContext(ctx, r.exec, &d, query, id); err != nil {
+		return nil, fmt.Errorf("get delivery by id: %w", err)
+	}
+
+	return &d, nil
 }
 
 func (r *DeliveryRepository) Update(ctx context.Context, deliveryID uuid.UUID, column string, value any) error {
@@ -70,20 +67,31 @@ func (r *DeliveryRepository) Update(ctx context.Context, deliveryID uuid.UUID, c
 		return fmt.Errorf("attempted to update disallowed column: %s", column)
 	}
 
-	query := fmt.Sprintf(`UPDATE deliveries SET %s = $1, updated_at = NOW() WHERE id = $2`, column)
-	res, err := r.db.ExecContext(ctx, query, value, deliveryID)
+	query := fmt.Sprintf(`
+		UPDATE deliveries 
+		SET %s = :value, updated_at = NOW() 
+		WHERE id = :id
+	`, column)
+
+	args := map[string]interface{}{
+		"value": value,
+		"id":    deliveryID,
+	}
+
+	res, err := sqlx.NamedExecContext(ctx, r.exec, query, args)
 	if err != nil {
-		return err
+		return fmt.Errorf("update delivery: %w", err)
 	}
 
 	rows, err := res.RowsAffected()
 	if err != nil {
-		return err
+		return fmt.Errorf("rows affected: %w", err)
 	}
 
 	if rows == 0 {
-		return fmt.Errorf("no order found with id %s", deliveryID)
+		return fmt.Errorf("no delivery found with id %s", deliveryID)
 	}
+
 	return nil
 }
 
@@ -91,12 +99,13 @@ func (r *DeliveryRepository) Accept(ctx context.Context, d *delivery.Delivery) e
 	query := `
 		UPDATE deliveries
 		SET status = 'picked_up',
-			picked_up_at = $1,
-			driver_id = $2,
+			picked_up_at = :picked_up_at,
+			driver_id = :driver_id,
 			updated_at = NOW()
-		WHERE id = $3 AND status = 'assigned'
+		WHERE id = :id AND status = 'assigned'
 	`
-	res, err := r.db.ExecContext(ctx, query, d.PickedUpAt, d.DriverID, d.ID)
+
+	res, err := sqlx.NamedExecContext(ctx, r.exec, query, d)
 	if err != nil {
 		return fmt.Errorf("failed to accept delivery: %w", err)
 	}
@@ -113,15 +122,36 @@ func (r *DeliveryRepository) Accept(ctx context.Context, d *delivery.Delivery) e
 	return nil
 }
 
-func (r *DeliveryRepository) List() ([]*delivery.Delivery, error) {
-	query := `SELECT id, order_id, driver_id, assigned_at, picked_up_at, delivered_at, status FROM deliveries`
+func (r *DeliveryRepository) List(ctx context.Context) ([]*delivery.Delivery, error) {
+	query := `
+		SELECT id, order_id, driver_id, assigned_at, picked_up_at, delivered_at, status 
+		FROM deliveries
+	`
 	var deliveries []*delivery.Delivery
-	err := r.db.Select(&deliveries, query)
+
+	err := sqlx.SelectContext(ctx, r.exec, &deliveries, query)
 	return deliveries, err
 }
 
 func (r *DeliveryRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	query := `DELETE FROM deliveries WHERE id = $1`
-	_, err := r.db.ExecContext(ctx, query, id)
-	return err
+	query := `
+		DELETE FROM deliveries 
+		WHERE id = $1
+	`
+
+	res, err := r.exec.ExecContext(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete delivery: %w", err)
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("could not verify delivery deletion: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("delivery already deleted or invalid")
+	}
+
+	return nil
 }

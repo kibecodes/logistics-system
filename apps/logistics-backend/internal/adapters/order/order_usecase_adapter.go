@@ -6,7 +6,6 @@ import (
 	orderusecase "logistics-backend/internal/usecase/order"
 
 	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
 )
 
 type UseCaseAdapter struct {
@@ -17,6 +16,6 @@ func (a *UseCaseAdapter) GetOrderByID(ctx context.Context, id uuid.UUID) (*order
 	return a.UseCase.GetOrder(ctx, id)
 }
 
-func (a *UseCaseAdapter) UpdateOrderTx(ctx context.Context, tx *sqlx.Tx, orderID uuid.UUID, column string, value any) error {
-	return a.UseCase.UpdateOrderTx(ctx, tx, orderID, column, value)
+func (a *UseCaseAdapter) UpdateOrder(ctx context.Context, orderID uuid.UUID, column string, value any) error {
+	return a.UseCase.UpdateOrder(ctx, orderID, column, value)
 }

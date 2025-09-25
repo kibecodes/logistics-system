@@ -8,10 +8,10 @@ import (
 
 // User = actual onboarded account in the system.
 type Repository interface {
-	Create(user *User) error                                                           // POST
-	GetByID(id uuid.UUID) (*User, error)                                               // GET
-	GetByEmail(email string) (*User, error)                                            // GET
-	List() ([]*User, error)                                                            // GET
+	Create(ctx context.Context, user *User) error                                      // POST
+	GetByID(ctx context.Context, id uuid.UUID) (*User, error)                          // GET
+	GetByEmail(ctx context.Context, email string) (*User, error)                       // GET
+	List(ctx context.Context) ([]*User, error)                                         // GET
 	GetAllCustomers(ctx context.Context) ([]AllCustomers, error)                       // GET
 	UpdateColum(ctx context.Context, userID uuid.UUID, column string, value any) error // PATCH
 	UpdateProfile(ctx context.Context, id uuid.UUID, phone string) error               // PUT

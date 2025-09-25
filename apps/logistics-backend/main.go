@@ -52,10 +52,9 @@ func main() {
 		log.Fatal("PUBLIC_API_BASE_URL not set")
 	}
 
-	db, err := sqlx.Connect("postgres", dbUrl)
-	if err != nil {
-		log.Fatalf("failed to connect to db: %v", err)
-	}
+	db := sqlx.MustConnect("postgres", dbUrl)
+
+	txm := application.NewTxManager(db)
 
 	// Set up repositories
 	userRepo := postgres.NewUserRepository(db)
@@ -70,12 +69,12 @@ func main() {
 
 	// Set up usecase
 	// Individual
-	inviteUC := inviteUsecase.NewUseCase(inviteRepo)
-	driverUC := driverUsecase.NewUseCase(driverRepo)
-	userUC := userUsecase.NewUseCase(userRepo, driverUC)
-	inventoryUC := inventoryUsecase.NewUseCase(inventoryRepo)
-	orderUC := orderUsecase.NewUseCase(orderRepo, &inventoryadapter.UseCaseAdapter{UseCase: inventoryUC}, &useradapter.UseCaseAdapter{UseCase: userUC})
-	deliveryUC := deliveryUsecase.NewUseCase(deliveryRepo, &orderadapter.UseCaseAdapter{UseCase: orderUC}, &driveradapter.UseCaseAdapter{UseCase: driverUC})
+	inviteUC := inviteUsecase.NewUseCase(inviteRepo, txm)
+	driverUC := driverUsecase.NewUseCase(driverRepo, txm)
+	userUC := userUsecase.NewUseCase(userRepo, driverUC, txm)
+	inventoryUC := inventoryUsecase.NewUseCase(inventoryRepo, txm)
+	orderUC := orderUsecase.NewUseCase(orderRepo, &inventoryadapter.UseCaseAdapter{UseCase: inventoryUC}, &useradapter.UseCaseAdapter{UseCase: userUC}, txm)
+	deliveryUC := deliveryUsecase.NewUseCase(deliveryRepo, &orderadapter.UseCaseAdapter{UseCase: orderUC}, &driveradapter.UseCaseAdapter{UseCase: driverUC}, txm)
 
 	// Combined cross-domain service
 	orderService := application.NewOrderService(
@@ -87,15 +86,15 @@ func main() {
 	)
 
 	// Other usecases
-	paymentUC := paymentUsecase.NewUseCase(paymentRepo)
-	feedbackUC := feedbackUsecase.NewUseCase(feedbackRepo)
-	notificationUC := notificationUsecase.NewUseCase(notificationRepo)
+	paymentUC := paymentUsecase.NewUseCase(paymentRepo, txm)
+	feedbackUC := feedbackUsecase.NewUseCase(feedbackRepo, txm)
+	notificationUC := notificationUsecase.NewUseCase(notificationRepo, txm)
 
 	// Set up Handlers
-	userHandler := handlers.NewUserHandler(userUC)
+	userHandler := handlers.NewUserHandler(orderService)
 	orderHandler := handlers.NewOrderHandler(orderService)
-	driverHandler := handlers.NewDriverHandler(driverUC)
-	deliveryHandler := handlers.NewDeliveryHandler(deliveryUC)
+	driverHandler := handlers.NewDriverHandler(orderService)
+	deliveryHandler := handlers.NewDeliveryHandler(orderService)
 	paymentHandler := handlers.NewPaymentHandler(paymentUC)
 	feedbackHandler := handlers.NewFeedbackHandler(feedbackUC)
 	notificationHandler := handlers.NewNotificationHandler(notificationUC)

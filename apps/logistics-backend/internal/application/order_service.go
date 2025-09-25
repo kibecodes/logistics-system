@@ -12,7 +12,6 @@ import (
 	useradapter "logistics-backend/internal/adapters/user"
 
 	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
 )
 
 type OrderService struct {
@@ -78,8 +77,8 @@ func (s *OrderService) GetOrderWithDriver(ctx context.Context, orderID uuid.UUID
 	}{Order: order, Delivery: delivery, Driver: driver}, nil
 }
 
-func (s *OrderService) UpdateOrderAndDriver(ctx context.Context, tx *sqlx.Tx, orderID uuid.UUID, driverID uuid.UUID, column string, value any) error {
-	if err := s.Orders.UpdateOrderTx(ctx, tx, orderID, column, value); err != nil {
+func (s *OrderService) UpdateOrderAndDriver(ctx context.Context, orderID uuid.UUID, driverID uuid.UUID, column string, value any) error {
+	if err := s.Orders.UpdateOrder(ctx, orderID, column, value); err != nil {
 		return fmt.Errorf("update order: %w", err)
 	}
 	if err := s.Drivers.UpdateDriverAvailability(ctx, driverID, "available", false); err != nil {

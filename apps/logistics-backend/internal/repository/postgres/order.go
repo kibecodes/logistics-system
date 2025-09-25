@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"logistics-backend/internal/application"
 	"logistics-backend/internal/domain/order"
 
 	"github.com/google/uuid"
@@ -10,74 +11,72 @@ import (
 )
 
 type OrderRepository struct {
-	db *sqlx.DB
+	exec sqlx.ExtContext
 }
 
-func NewOrderRepository(db *sqlx.DB) order.Repository {
-	return &OrderRepository{db: db}
+func NewOrderRepository(db *sqlx.DB) *OrderRepository {
+	return &OrderRepository{exec: db}
 }
 
-func (r *OrderRepository) Create(o *order.Order) error {
+func (r *OrderRepository) execFromCtx(ctx context.Context) sqlx.ExtContext {
+	if tx := application.GetTx(ctx); tx != nil {
+		return tx
+	}
+	return r.exec
+}
+
+func (r *OrderRepository) Create(ctx context.Context, o *order.Order) error {
 	query := `
-		INSERT INTO orders (user_id, inventory_id, quantity, pickup_address, delivery_address, status)
-		VALUES (:user_id, :inventory_id, :quantity, :pickup_address, :delivery_address, :status)
+		INSERT INTO orders (admin_id, user_id, inventory_id, quantity, pickup_address, delivery_address, status)
+		VALUES (:admin_id, :user_id, :inventory_id, :quantity, :pickup_address, :delivery_address, :status)
 		RETURNING id
 	`
 
-	stmt, err := r.db.PrepareNamed(query)
+	rows, err := sqlx.NamedQueryContext(ctx, r.execFromCtx(ctx), query, o)
 	if err != nil {
-		return err
+		return fmt.Errorf("insert order: %w", err)
 	}
-	return stmt.Get(&o.ID, o)
-}
+	defer rows.Close()
 
-func (r *OrderRepository) GetByID(id uuid.UUID) (*order.Order, error) {
-	query := `SELECT id, user_id, inventory_id, quantity, pickup_address, delivery_address, status, created_at, updated_at FROM orders WHERE id = $1`
-	var o order.Order
-	err := r.db.Get(&o, query, id)
-	return &o, err
-}
-
-func (r *OrderRepository) ListByCustomer(customerID uuid.UUID) ([]*order.Order, error) {
-	query := `SELECT id, user_id, inventory_id, quantity, pickup_address, delivery_address, status, created_at, updated_at FROM orders WHERE user_id = $1`
-	var orders []*order.Order
-	err := r.db.Select(&orders, query, customerID)
-	return orders, err
-}
-
-// non transaction - simple update method
-func (r *OrderRepository) UpdateColumn(ctx context.Context, orderID uuid.UUID, column string, value any) error {
-	// Validate column name to avoid SQL injection
-	allowed := map[string]bool{
-		"status":           true,
-		"quantity":         true,
-		"pickup_address":   true,
-		"delivery_address": true,
+	if rows.Next() {
+		if err := rows.Scan(&o.ID); err != nil {
+			return fmt.Errorf("scanning new order id: %w", err)
+		}
+	} else {
+		return fmt.Errorf("no id returned after scan")
 	}
 
-	if !allowed[column] {
-		return fmt.Errorf("attempted to update disallowed column: %s", column)
-	}
-
-	query := fmt.Sprintf(`UPDATE orders SET %s = $1, updated_at = NOW() WHERE id = $2`, column)
-	res, err := r.db.ExecContext(ctx, query, value, orderID)
-	if err != nil {
-		return err
-	}
-
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-
-	if rows == 0 {
-		return fmt.Errorf("no order found with id %s", orderID)
-	}
 	return nil
 }
 
-func (r *OrderRepository) UpdateColumnTx(ctx context.Context, tx *sqlx.Tx, orderID uuid.UUID, column string, value any) error {
-	// Validate column name to avoid SQL injection
+func (r *OrderRepository) GetByID(ctx context.Context, id uuid.UUID) (*order.Order, error) {
+	query := `
+		SELECT id, user_id, admin_id, inventory_id, quantity, pickup_address, delivery_address, status, created_at, updated_at 
+		FROM orders 
+		WHERE id = $1
+	`
+
+	var o order.Order
+	if err := sqlx.GetContext(ctx, r.execFromCtx(ctx), &o, query, id); err != nil {
+		return nil, fmt.Errorf("get order by id: %w", err)
+	}
+
+	return &o, nil
+}
+
+func (r *OrderRepository) ListByCustomer(ctx context.Context, customerID uuid.UUID) ([]*order.Order, error) {
+	query := `
+		SELECT id, user_id, admin_id, inventory_id, quantity, pickup_address, delivery_address, status, created_at, updated_at 
+		FROM orders 
+		WHERE user_id = $1
+	`
+
+	var orders []*order.Order
+	err := sqlx.SelectContext(ctx, r.execFromCtx(ctx), &orders, query, customerID)
+	return orders, err
+}
+
+func (r *OrderRepository) Update(ctx context.Context, orderID uuid.UUID, column string, value any) error {
 	allowed := map[string]bool{
 		"status":           true,
 		"quantity":         true,
@@ -89,20 +88,30 @@ func (r *OrderRepository) UpdateColumnTx(ctx context.Context, tx *sqlx.Tx, order
 		return fmt.Errorf("attempted to update disallowed column: %s", column)
 	}
 
-	query := fmt.Sprintf(`UPDATE orders SET %s = $1, updated_at = NOW() WHERE id = $2`, column)
-	res, err := tx.ExecContext(ctx, query, value, orderID)
+	query := fmt.Sprintf(`
+		UPDATE orders SET %s = :value, updated_at = NOW() 
+		WHERE id = :id
+	`, column)
+
+	args := map[string]interface{}{
+		"value": value,
+		"id":    orderID,
+	}
+
+	res, err := sqlx.NamedExecContext(ctx, r.execFromCtx(ctx), query, args)
 	if err != nil {
-		return err
+		return fmt.Errorf("update order: %w", err)
 	}
 
 	rows, err := res.RowsAffected()
 	if err != nil {
-		return err
+		return fmt.Errorf("rows affected: %w", err)
 	}
 
 	if rows == 0 {
 		return fmt.Errorf("no order found with id %s", orderID)
 	}
+
 	return nil
 }
 
@@ -119,15 +128,36 @@ func (r *OrderRepository) UpdateColumnTx(ctx context.Context, tx *sqlx.Tx, order
 // 	return nil
 // }
 
-func (r *OrderRepository) List() ([]*order.Order, error) {
-	query := `SELECT id, user_id, inventory_id, quantity, pickup_address, delivery_address, status, created_at, updated_at FROM orders`
+func (r *OrderRepository) List(ctx context.Context) ([]*order.Order, error) {
+	query := `
+		SELECT id, user_id, admin_id, inventory_id, quantity, pickup_address, delivery_address, status, created_at, updated_at 
+		FROM orders
+	`
+
 	var orders []*order.Order
-	err := r.db.Select(&orders, query)
+	err := sqlx.SelectContext(ctx, r.execFromCtx(ctx), &orders, query)
 	return orders, err
 }
 
 func (r *OrderRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	query := `DELETE FROM orders WHERE id = $1 `
-	_, err := r.db.ExecContext(ctx, query, id)
-	return err
+	query := `
+		DELETE FROM orders 
+		WHERE id = $1
+	`
+
+	res, err := r.exec.ExecContext(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete order: %w", err)
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("could not verify order deletion: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("order already deleted or invalid")
+	}
+
+	return nil
 }

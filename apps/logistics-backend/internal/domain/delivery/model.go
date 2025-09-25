@@ -9,10 +9,10 @@ import (
 type DeliveryStatus string
 
 const (
-	DeliveryAssigned  DeliveryStatus = "assigned"
-	DeliveryPickedUp  DeliveryStatus = "picked_up"
-	DeliveryDelivered DeliveryStatus = "delivered"
-	DeliveryFailed    DeliveryStatus = "failed"
+	Assigned  DeliveryStatus = "assigned"
+	PickedUp  DeliveryStatus = "picked_up"
+	Delivered DeliveryStatus = "delivered"
+	Failed    DeliveryStatus = "failed"
 )
 
 type Delivery struct {

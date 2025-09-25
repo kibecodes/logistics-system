@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -44,15 +46,15 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.UC.Orders.UseCase.CreateOrder(r.Context(), o); err != nil {
 
-		switch err {
-		case order.ErrorOutOfStock:
+		switch {
+		case errors.Is(err, order.ErrorOutOfStock):
 			writeJSONError(w, http.StatusConflict, "Product is out of stock", err)
 			return
-		case order.ErrorInvalidQuantity:
+		case errors.Is(err, order.ErrorInvalidQuantity):
 			writeJSONError(w, http.StatusConflict, "Invalid Product Quantity", err)
 		default:
+			log.Printf("CreateOrder unexpected error: %v", err)
 			writeJSONError(w, http.StatusInternalServerError, "Could not create order", err)
-			return
 		}
 	}
 
@@ -60,6 +62,7 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]any{
 		"id":                o.ID,
+		"admin_id":          o.AdminID,
 		"customer_id":       o.CustomerID,
 		"inventory_id":      o.InventoryID,
 		"quantity":          o.Quantity,

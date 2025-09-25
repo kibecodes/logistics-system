@@ -43,7 +43,8 @@ type Customer struct {
 }
 
 type Inventory struct {
-	ID      uuid.UUID `db:"id" json:"id"`
-	Name    string    `db:"name" json:"name"`
-	AdminID uuid.UUID `db:"admin_id" json:"admin_id"`
+	ID       uuid.UUID `db:"id" json:"id"`
+	Name     string    `db:"name" json:"name"`
+	AdminID  uuid.UUID `db:"admin_id" json:"admin_id"`
+	Category string    `db:"category" json:"category"`
 }

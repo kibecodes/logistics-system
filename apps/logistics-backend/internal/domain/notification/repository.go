@@ -1,9 +1,14 @@
 package notification
 
-import "github.com/google/uuid"
+import (
+	"context"
+
+	"github.com/google/uuid"
+)
 
 type Repository interface {
-	Create(notification *Notification) error
-	GetByID(id uuid.UUID) (*Notification, error)
-	List() ([]*Notification, error)
+	Create(ctx context.Context, notification *Notification) error
+	GetByID(ctx context.Context, id uuid.UUID) (*Notification, error)
+	List(ctx context.Context) ([]*Notification, error)
+	Delete(ctx context.Context, id uuid.UUID) error
 }

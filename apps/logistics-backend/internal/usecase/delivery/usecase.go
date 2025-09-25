@@ -3,111 +3,118 @@ package delivery
 import (
 	"context"
 	"fmt"
-	"log"
 	"logistics-backend/internal/domain/delivery"
+	"logistics-backend/internal/usecase/common"
 
 	"github.com/google/uuid"
 )
 
 type UseCase struct {
-	repo    delivery.Repository
-	ordRepo delivery.OrderReader
-	drvRepo delivery.DriverReader
+	repo      delivery.Repository
+	ordRepo   delivery.OrderReader
+	drvRepo   delivery.DriverReader
+	txManager common.TxManager
 }
 
-func NewUseCase(repo delivery.Repository, ordRepo delivery.OrderReader, drvRepo delivery.DriverReader) *UseCase {
-	return &UseCase{repo: repo, ordRepo: ordRepo, drvRepo: drvRepo}
+func NewUseCase(repo delivery.Repository, ordRepo delivery.OrderReader, drvRepo delivery.DriverReader, txm common.TxManager) *UseCase {
+	return &UseCase{repo: repo, ordRepo: ordRepo, drvRepo: drvRepo, txManager: txm}
 }
 
 func (uc *UseCase) CreateDelivery(ctx context.Context, d *delivery.Delivery) error {
-	tx, err := uc.repo.BeginTx(ctx)
-	if err != nil {
-		return fmt.Errorf("could not start transaction: %w", err)
-	}
-	defer tx.Rollback()
 
-	// 1. fetch order
-	order, err := uc.ordRepo.GetOrderByID(ctx, d.OrderID)
-	if err != nil {
-		return fmt.Errorf("could not fetch order: %w", err)
-	}
-	if order.OrderStatus != "pending" {
-		return delivery.ErrorNoPendingOrder
-	}
+	return uc.txManager.Do(ctx, func(txCtx context.Context) error {
 
-	// 2. update order status using tx
-	if err := uc.ordRepo.UpdateOrderTx(ctx, tx, order.ID, "status", "assigned"); err != nil {
-		return fmt.Errorf("could not update order status: %w", err)
-	}
+		// 1. fetch order
+		order, err := uc.ordRepo.GetOrderByID(ctx, d.OrderID)
+		if err != nil {
+			return fmt.Errorf("could not fetch order: %w", err)
+		}
+		if order.OrderStatus != "pending" {
+			return delivery.ErrorNoPendingOrder
+		}
 
-	// 3. create delivery using tx
-	if err := uc.repo.CreateTx(ctx, tx, d); err != nil {
-		return fmt.Errorf("could not create delivery: %w", err)
-	}
+		// 2. update order status using tx
+		if err := uc.ordRepo.UpdateOrder(ctx, order.ID, "status", "assigned"); err != nil {
+			return fmt.Errorf("could not update order status: %w", err)
+		}
 
-	// 4. commit
-	return tx.Commit()
+		// 3. create delivery using tx
+		if err := uc.repo.Create(ctx, d); err != nil {
+			return fmt.Errorf("could not create delivery: %w", err)
+		}
+
+		return nil
+	})
+
 }
 
 func (uc *UseCase) GetDeliveryByID(ctx context.Context, deliveryId uuid.UUID) (*delivery.Delivery, error) {
-	return uc.repo.GetByID(deliveryId)
+	return uc.repo.GetByID(ctx, deliveryId)
 }
 
 func (uc *UseCase) UpdateDelivery(ctx context.Context, deliveryID uuid.UUID, column string, value any) error {
-	return uc.repo.Update(ctx, deliveryID, column, value)
+	return uc.txManager.Do(ctx, func(txCtx context.Context) error {
+		if err := uc.repo.Update(txCtx, deliveryID, column, value); err != nil {
+			return fmt.Errorf("update delivery failed: %w", err)
+		}
+
+		return nil
+	})
 }
 
 func (uc *UseCase) AcceptDelivery(ctx context.Context, d *delivery.Delivery) error {
-	// get driver by id
-	log.Printf("delivery usecase driver id: %+v", d.DriverID)
-	driver, err := uc.drvRepo.GetDriverByID(ctx, d.DriverID)
-	if err != nil {
-		log.Printf("ERROR fetching driver: %v", err)
-		return fmt.Errorf("could not fetch driver: %w", err)
-	}
-	if driver == nil {
-		log.Printf("Driver is nil for ID: %s", d.DriverID)
-		return fmt.Errorf("driver not found")
-	}
 
-	// check availability - bool
-	if !driver.Available {
-		return fmt.Errorf("driver not available")
-	}
+	return uc.txManager.Do(ctx, func(txCtx context.Context) error {
 
-	tx, err := uc.repo.BeginTx(ctx)
-	if err != nil {
-		return fmt.Errorf("could not start transaction: %w", err)
-	}
-	defer tx.Rollback()
+		// 1. get driver by id
+		driver, err := uc.drvRepo.GetDriverByID(txCtx, d.DriverID)
+		if err != nil {
+			return fmt.Errorf("could not fetch driver: %w", err)
+		}
+		if driver == nil {
+			return fmt.Errorf("driver not found")
+		}
 
-	// get order
-	order, err := uc.ordRepo.GetOrderByID(ctx, d.OrderID)
-	if err != nil {
-		return fmt.Errorf("could not fetch order: %w", err)
-	}
-	// update order
-	if err := uc.ordRepo.UpdateOrderTx(ctx, tx, order.ID, "status", "in_transit"); err != nil {
-		return fmt.Errorf("could not update order status: %w", err)
-	}
+		// 2. check availability - bool
+		if !driver.Available {
+			return fmt.Errorf("driver not available")
+		}
 
-	// accept delivery
-	if err := uc.repo.Accept(ctx, d); err != nil {
-		return fmt.Errorf("could not accept delivery: %w", err)
-	}
+		// 3. get order
+		order, err := uc.ordRepo.GetOrderByID(txCtx, d.OrderID)
+		if err != nil {
+			return fmt.Errorf("could not fetch order: %w", err)
+		}
+		// 4. update order
+		if err := uc.ordRepo.UpdateOrder(txCtx, order.ID, "status", "in_transit"); err != nil {
+			return fmt.Errorf("could not update order status: %w", err)
+		}
 
-	// update driver availability
-	if err := uc.drvRepo.UpdateDriverAvailability(ctx, driver.ID, "availability", false); err != nil {
-		return fmt.Errorf("could not update driver availability: %w", err)
-	}
+		// 5. accept delivery
+		if err := uc.repo.Accept(txCtx, d); err != nil {
+			return fmt.Errorf("could not accept delivery: %w", err)
+		}
 
-	return tx.Commit()
+		// 6. update driver availability
+		if err := uc.drvRepo.UpdateDriverAvailability(txCtx, driver.ID, "availability", false); err != nil {
+			return fmt.Errorf("could not update driver availability: %w", err)
+		}
+
+		return nil
+	})
+
 }
 
 func (uc *UseCase) ListDeliveries(ctx context.Context) ([]*delivery.Delivery, error) {
-	return uc.repo.List()
+	return uc.repo.List(ctx)
 }
 
 func (uc *UseCase) DeleteDelivery(ctx context.Context, id uuid.UUID) error {
-	return uc.repo.Delete(ctx, id)
+	return uc.txManager.Do(ctx, func(txCtx context.Context) error {
+		if err := uc.repo.Delete(txCtx, id); err != nil {
+			return fmt.Errorf("delete delivery failed: %w", err)
+		}
+
+		return nil
+	})
 }

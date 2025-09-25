@@ -31,9 +31,10 @@ func (a *UseCaseAdapter) GetAllInventories(ctx context.Context) ([]order.Invento
 	res := make([]order.Inventory, len(invs))
 	for i, inv := range invs {
 		res[i] = order.Inventory{
-			ID:      inv.ID,
-			Name:    inv.Name,
-			AdminID: inv.AdminID,
+			ID:       inv.ID,
+			Name:     inv.Name,
+			AdminID:  inv.AdminID,
+			Category: inv.Category,
 			// map other fields you need
 		}
 	}

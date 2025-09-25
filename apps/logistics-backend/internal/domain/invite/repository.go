@@ -1,11 +1,15 @@
 package invite
 
-import "github.com/google/uuid"
+import (
+	"context"
+
+	"github.com/google/uuid"
+)
 
 // Invite = pending entry, just an email + role + token + expiration.
 type Repository interface {
-	Create(invite *Invite) error              // POST
-	GetByToken(token string) (*Invite, error) // GET
-	ListPending() ([]*Invite, error)          // GET
-	Delete(id uuid.UUID) error                // DELETE
+	Create(ctx context.Context, invite *Invite) error              // POST
+	GetByToken(ctx context.Context, token string) (*Invite, error) // GET
+	ListPending(ctx context.Context) ([]*Invite, error)            // GET
+	Delete(ctx context.Context, id uuid.UUID) error                // DELETE
 }

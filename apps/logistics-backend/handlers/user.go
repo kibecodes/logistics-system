@@ -9,8 +9,8 @@ import (
 	"os"
 	"time"
 
+	"logistics-backend/internal/application"
 	"logistics-backend/internal/domain/user"
-	usecase "logistics-backend/internal/usecase/user"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt"
@@ -18,7 +18,7 @@ import (
 )
 
 type UserHandler struct {
-	UC *usecase.UseCase
+	UC *application.OrderService
 }
 
 // ErrorResponse is a generic error model for API responses.
@@ -28,7 +28,7 @@ type ErrorResponse struct {
 	Detail string `json:"detail,omitempty" example:"validation failed on field 'email'"` // optional internal error
 }
 
-func NewUserHandler(uc *usecase.UseCase) *UserHandler {
+func NewUserHandler(uc *application.OrderService) *UserHandler {
 	return &UserHandler{UC: uc}
 }
 
@@ -77,7 +77,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	u := req.ToUser()
 
-	if err := h.UC.RegisterUser(r.Context(), u); err != nil {
+	if err := h.UC.Users.UseCase.RegisterUser(r.Context(), u); err != nil {
 		log.Printf("failed to create user: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "Failed to create user", err)
 		return
@@ -126,7 +126,7 @@ func (h *UserHandler) UpdateUserProfile(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := h.UC.UpdateDriverProfile(r.Context(), userID, &req); err != nil {
+	if err := h.UC.Users.UseCase.UpdateUserProfile(r.Context(), userID, &req); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "Failed to update user profile", err)
 		return
 	}
@@ -164,7 +164,7 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.UC.UpdateUser(r.Context(), userID, &req); err != nil {
+	if err := h.UC.Users.UseCase.UpdateUser(r.Context(), userID, &req); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "Failed to update user", err)
 		return
 	}
@@ -196,7 +196,7 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u, err := h.UC.GetUserByID(r.Context(), id)
+	u, err := h.UC.Users.UseCase.GetUserByID(r.Context(), id)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "User not found", err)
 		return
@@ -225,7 +225,7 @@ func (h *UserHandler) GetUserByEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u, err := h.UC.GetUserByEmail(r.Context(), email)
+	u, err := h.UC.Users.UseCase.GetUserByEmail(r.Context(), email)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "User not found", err)
 		return
@@ -244,7 +244,7 @@ func (h *UserHandler) GetUserByEmail(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {array} user.User
 // @Router /users/all_users [get]
 func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
-	users, err := h.UC.ListUsers(r.Context())
+	users, err := h.UC.Users.UseCase.ListUsers(r.Context())
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "Could not fetch users", err)
 		return
@@ -274,7 +274,7 @@ func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u, err := h.UC.GetUserByEmail(r.Context(), req.Email)
+	u, err := h.UC.Users.UseCase.GetUserByEmail(r.Context(), req.Email)
 	if err != nil || !u.ComparePassword(req.Password) {
 		writeJSONError(w, http.StatusUnauthorized, "Invalid credentials", err)
 		return
@@ -285,7 +285,7 @@ func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		Column: "last_login",
 		Value:  time.Now(),
 	}
-	if err := h.UC.UpdateUser(r.Context(), u.ID, reqUpdate); err != nil {
+	if err := h.UC.Users.UseCase.UpdateUser(r.Context(), u.ID, reqUpdate); err != nil {
 		log.Printf("failed to update last login for user %s: %v", u.ID, err)
 	}
 
@@ -349,7 +349,7 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.UC.DeleteUser(r.Context(), userID); err != nil {
+	if err := h.UC.Users.UseCase.DeleteUser(r.Context(), userID); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "Failed to delete user", err)
 		return
 	}
