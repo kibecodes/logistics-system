@@ -14,17 +14,17 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <InputField
                     Label="Pickup Location"
-                    Value="@order.PickupLocation"
-                    ValueChanged="((string v) => order.PickupLocation = v)"
-                    ValueExpression="@(() => order.PickupLocation)"
+                    Value="@order.PickupAddress"
+                    ValueChanged="((string v) => order.PickupAddress = v)"
+                    ValueExpression="@(() => order.PickupAddress)"
                     Placeholder="e.g., Warehouse A" 
                 />
 
                 <InputField 
                     Label="Delivery Location" 
-                    Value="@order.DeliveryLocation"
-                    ValueChanged="((string v) => order.DeliveryLocation = v)"
-                    ValueExpression="@(() => order.DeliveryLocation)"
+                    Value="@order.DeliveryAddress"
+                    ValueChanged="((string v) => order.DeliveryAddress = v)"
+                    ValueExpression="@(() => order.DeliveryAddress)"
                     Placeholder="e.g., Customer Address" 
                 />
 
@@ -117,8 +117,8 @@
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(order.PickupLocation) ||
-            string.IsNullOrWhiteSpace(order.DeliveryLocation))
+        if (string.IsNullOrWhiteSpace(order.PickupAddress) ||
+            string.IsNullOrWhiteSpace(order.DeliveryAddress))
         {
             ToastService.ShowToast("Pickup and delivery locations are required.", ToastService.ToastLevel.Warning);
             return;

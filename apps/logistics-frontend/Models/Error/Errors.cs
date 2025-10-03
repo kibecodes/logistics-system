@@ -4,6 +4,9 @@ namespace logistics_frontend.Models.Errors
     {
         public string Error { get; set; } = string.Empty;
         public string Detail { get; set; } = string.Empty;
+
+        // handle backend validation messages
+        public Dictionary<string, string[]>? Errors { get; set; }
     }
 
     public class ServiceResult<T>

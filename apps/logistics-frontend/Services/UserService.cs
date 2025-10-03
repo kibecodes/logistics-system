@@ -78,13 +78,17 @@ public class UserService
             return ServiceResult<List<User>>.Ok(_cachedUsers, fromCache: true);
         }
 
-        var result = await GetAllUsers();
-        if (result.Success)
+        var result = await GetAllUsers(); 
+        if (result.Success && result.Data != null && result.Data.Any())
         {
             _cachedUsers = result.Data;
             _lastFetchTime = DateTime.UtcNow;
 
             _toastService.ShowToast("Users fetched successfully.", ToastService.ToastLevel.Success);
+        }
+        else if (result.Success && (result.Data == null || !result.Data.Any()))
+        {
+            _toastService.ShowToast("No users.", ToastService.ToastLevel.Warning);
         }
         else
         {

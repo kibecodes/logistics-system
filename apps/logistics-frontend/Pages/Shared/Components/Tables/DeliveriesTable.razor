@@ -1,36 +1,37 @@
-@using logistics_frontend.Models.Order
+@using logistics_frontend.Models.Delivery
 
 <table class="min-w-full table-auto text-sm text-left text-gray-700">
     <thead class="bg-gray-50 text-xs uppercase text-gray-500 border-b">
-        <tr>
+         <tr>
             <th class="px-4 py-3">No.</th>
-            <th class="px-4 py-3">Quantity</th>
-            <th class="px-4 py-3">Pickup</th>
-            <th class="px-4 py-3">Delivery</th>
-            <th class="px-4 py-3">Status</th>
-            <th class="px-4 py-3">Created At</th>
+            <td class="px-4 py-3">Assigned At</td>
+            <td class="px-4 py-3">Order ID</td>
+            <td class="px-4 py-3">Status</td>
+            <td class="px-4 py-3">Pickedup At</td>
+            <td class="px-4 py-3">Delivered At</td>
             <th class="px-4 py-3 text-right">Actions</th>
         </tr>
     </thead>
+
     <tbody>
-        @if (PagedOrders.Any() == true)
+        @if (PagedDeliveries?.Any() == true)
         {
-            @foreach (var (order, index) in PagedOrders.Select((o, i) => (o, i)))
+            @foreach (var (delivery, index) in PagedDeliveries.Select((d, i) => (d, i)))
             {
                 <tr class="border-b hover:bg-gray-50">
                     <td class="px-4 py-2">@((index + 1) + (CurrentPage - 1) * PageSize)</td>
-                    <td class="px-4 py-2">@order.Quantity</td>
-                    <td class="px-4 py-2">@order.PickupAddress</td>
-                    <td class="px-4 py-2">@order.DeliveryAddress</td>
+                    <td class="px-4 py-2">@delivery.AssignedAt</td>
+                    <td class="px-4 py-2">@delivery.OrderID</td>
                     <td class="px-4 py-2">
-                        <span class="@GetStatusClass(order.Status.ToString())">
-                            @order.Status
+                        <span class="@GetStatusClass(delivery.Status.ToString())">
+                            @delivery.Status
                         </span>
                     </td>
-                    <td class="px-4 py-2">@order.CreatedAt.ToString("g")</td>
+                    <td class="px-4 py-2">@delivery.PickedUpAt</td>
+                    <td class="px-4 py-2">@delivery.DeliveredAt</td>
                     <td class="px-4 py-2 text-right">
                         <TableRowActions
-                            ColumnValueId="@order.ID"
+                            ColumnValueId="@delivery.ID"
                             OnView="OnView"
                             OnEdit="OnEdit"
                             OnDelete="OnDelete"
@@ -42,14 +43,14 @@
         else
         {
             <tr>
-                <td colspan="7" class="text-center text-gray-500 py-4">No orders found.</td>
+                <td colspan="7" class="text-center text-gray-500 py-4">No deliveries found.</td>
             </tr>
         }
     </tbody>
 </table>
 
 @code {
-    [Parameter] public List<Order> PagedOrders { get; set; } = new();
+    [Parameter] public List<Delivery> PagedDeliveries { get; set; } = new();
     [Parameter] public int CurrentPage { get; set; }
     [Parameter] public int PageSize { get; set; }
 
@@ -57,5 +58,5 @@
     [Parameter] public EventCallback<Guid> OnEdit { get; set; }
     [Parameter] public EventCallback<Guid> OnDelete { get; set; }
 
-    [Parameter] public Func<string?, string> GetStatusClass { get; set; } = status => ""; 
+    [Parameter] public Func<string?, string> GetStatusClass { get; set; } = status => "";
 }

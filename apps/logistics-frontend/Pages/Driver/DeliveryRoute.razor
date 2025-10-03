@@ -4,10 +4,105 @@
 @inject NavigationManager Navigation 
 @attribute [Authorize(Roles = "driver")]
 
+<div class="flex flex-col h-[calc(100vh-4rem)]">
+    <div class="p-4 border-b">
+        <h2 class="text-xl font-semibold">Today's Route</h2>
+        <p class="text-gray-600">Your assigned deliveries and optimized path</p>
+    </div>
 
-<h3>Today's Route</h3>
-<p>Route map or step-by-step instructions go here. (Integrate map API later)</p>
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Map -->
+        <div class="flex-1">
+            <RealTimeMap @ref="realTimeMap" Parameters="parameters" 
+                height="calc(100vh - 8rem)" width="100%" />
+        </div>
 
+        <!-- Sidebar with stops -->
+        <div class="w-64 bg-white border-l overflow-y-auto p-4">
+            <h3 class="font-medium mb-3">Stops</h3>
+            <ol class="list-decimal list-inside space-y-2 text-sm text-gray-700">
+                @foreach (var stop in deliveryStops)
+                {
+                    <li>@stop.Name <br /><span class="text-xs text-gray-500">@stop.Address</span></li>
+                }
+            </ol>
+        </div>
+    </div>
+</div>
 
 @code {
+    private RealTimeMap realTimeMap;
+
+    // TODO: replace with real assignments from backend
+    private List<DeliveryStop> deliveryStops = new()
+    {
+        new DeliveryStop { Name = "Stop 1", Address = "Customer A", Lat = -1.2925, Lng = 36.8220 },
+        new DeliveryStop { Name = "Stop 2", Address = "Customer B", Lat = -1.2980, Lng = 36.8290 },
+        new DeliveryStop { Name = "Stop 3", Address = "Customer C", Lat = -1.3050, Lng = 36.8350 }
+    };
+
+    RealTimeMap.LoadParameters parameters = new RealTimeMap.LoadParameters()
+    {
+        basemap = new RealTimeMap.Basemap()
+        {
+            basemapLayers = new List<RealTimeMap.BasemapLayer>()
+            {
+                new RealTimeMap.BasemapLayer()
+                {
+                    url = "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                    attribution = "©Open Street Map",
+                    title = "Open Street Map",
+                    detectRetina = true
+                }
+            }
+        },
+        location = new RealTimeMap.Location()
+        {
+            latitude = -1.29207,
+            longitude = 36.82195,
+        },
+        zoomLevel = 13
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && realTimeMap != null)
+        {
+            var driverPoint = new RealTimeMap.StreamPoint
+            {
+                guid = Guid.NewGuid(),
+                timestamp = DateTime.UtcNow,
+                latitude = -1.2921,
+                longitude = 36.8219,
+                type = "driver",
+                value = "You"
+            };
+
+            var points = new List<RealTimeMap.StreamPoint> { driverPoint };
+
+            // Add delivery stops
+            foreach (var stop in deliveryStops)
+            {
+                points.Add(new RealTimeMap.StreamPoint
+                {
+                    guid = Guid.NewGuid(),
+                    timestamp = DateTime.UtcNow,
+                    latitude = stop.Lat,
+                    longitude = stop.Lng,
+                    type = "destination",
+                    value = stop.Name
+                });
+            }
+
+            await realTimeMap.Geometric.Points.upload(points, true);
+        }
+    }
+
+    private class DeliveryStop
+    {
+        public string Name { get; set; }
+        public string Address { get; set; }
+        public double Lat { get; set; }
+        public double Lng { get; set; }
+    }
 }

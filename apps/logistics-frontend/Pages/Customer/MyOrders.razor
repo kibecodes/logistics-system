@@ -153,10 +153,10 @@ else
     orders?
     .Where(o =>
         (string.IsNullOrWhiteSpace(searchTerm) ||
-         o.PickupLocation.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-         o.DeliveryLocation.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) &&
+         o.PickupAddress.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+         o.DeliveryAddress.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) &&
         (string.IsNullOrWhiteSpace(statusFilter) ||
-         o.OrderStatus.ToString().Equals(statusFilter, StringComparison.OrdinalIgnoreCase)) &&
+         o.Status.ToString().Equals(statusFilter, StringComparison.OrdinalIgnoreCase)) &&
         (!startDate.HasValue || o.CreatedAt.Date >= startDate.Value.Date) &&
         (!endDate.HasValue || o.CreatedAt.Date <= endDate.Value.Date)
     ) ?? Enumerable.Empty<Order>();
@@ -169,9 +169,9 @@ else
             editableOrder = new Order
             {
                 ID = selectedOrder.ID,
-                PickupLocation = selectedOrder.PickupLocation,
-                DeliveryLocation = selectedOrder.DeliveryLocation,
-                OrderStatus = selectedOrder.OrderStatus
+                PickupAddress = selectedOrder.PickupAddress,
+                DeliveryAddress = selectedOrder.DeliveryAddress,
+                Status = selectedOrder.Status
             };
             BuildOrderFields(editableOrder);
 
@@ -188,9 +188,9 @@ else
             editableOrder = new Order
             {
                 ID = selectedOrder.ID,
-                PickupLocation = selectedOrder.PickupLocation,
-                DeliveryLocation = selectedOrder.DeliveryLocation,
-                OrderStatus = selectedOrder.OrderStatus
+                PickupAddress = selectedOrder.PickupAddress,
+                DeliveryAddress = selectedOrder.DeliveryAddress,
+                Status = selectedOrder.Status
             };
             BuildOrderFields(editableOrder);
 
@@ -211,9 +211,9 @@ else
         editableOrder = new Order
         {
             ID = order.ID,
-            PickupLocation = order.PickupLocation,
-            DeliveryLocation = order.DeliveryLocation,
-            OrderStatus = order.OrderStatus,
+            PickupAddress = order.PickupAddress,
+            DeliveryAddress = order.DeliveryAddress,
+            Status = order.Status,
         };
         BuildOrderFields(editableOrder);
 
@@ -240,10 +240,10 @@ else
             {
                 Label = "PickupLocation",
                 Type = "text",
-                Value = order.PickupLocation,
+                Value = order.PickupAddress,
                 ValueChanged = EventCallback.Factory.Create<string>(this, val => 
                 {
-                    order.PickupLocation = val;
+                    order.PickupAddress = val;
                 })
             },
 
@@ -251,10 +251,10 @@ else
             {
                 Label = "DeliveryLocation",
                 Type = "text",
-                Value = order.DeliveryLocation,
+                Value = order.DeliveryAddress,
                 ValueChanged = EventCallback.Factory.Create<string>(this, val => 
                 {
-                    order.DeliveryLocation = val;
+                    order.DeliveryAddress = val;
                 })  
             }, 
 
@@ -262,13 +262,13 @@ else
             {
                 Label = "OrderStatus",
                 Type = "select",
-                Value = order.OrderStatus.ToString(),
+                Value = order.Status.ToString(),
                 Options =  Enum.GetNames(typeof(OrderStatus)).ToList(),
                 ValueChanged = EventCallback.Factory.Create<string>(this, val => 
                 {
                     if (Enum.TryParse<OrderStatus>(val, out var status))
                     {
-                        order.OrderStatus = status;
+                        order.Status = status;
                     }
                 })
             }
@@ -282,16 +282,16 @@ else
 
         bool updated = false;
 
-        if (editableOrder.PickupLocation != selectedOrder.PickupLocation)
-            await OrderService.UpdateOrder(selectedOrder.ID, "PickupLocation", editableOrder.PickupLocation);
+        if (editableOrder.PickupAddress != selectedOrder.PickupAddress)
+            await OrderService.UpdateOrder(selectedOrder.ID, "PickupLocation", editableOrder.PickupAddress);
             updated = true;
 
-        if (editableOrder.DeliveryLocation != selectedOrder.DeliveryLocation)
-            await OrderService.UpdateOrder(selectedOrder.ID, "DeliveryLocation", editableOrder.DeliveryLocation);
+        if (editableOrder.DeliveryAddress != selectedOrder.DeliveryAddress)
+            await OrderService.UpdateOrder(selectedOrder.ID, "DeliveryLocation", editableOrder.DeliveryAddress);
             updated = true;
 
-        if (editableOrder.OrderStatus != selectedOrder.OrderStatus)
-            await OrderService.UpdateOrder(selectedOrder.ID, "OrderStatus", editableOrder.OrderStatus);
+        if (editableOrder.Status != selectedOrder.Status)
+            await OrderService.UpdateOrder(selectedOrder.ID, "OrderStatus", editableOrder.Status);
             updated = true;
 
         if (updated)

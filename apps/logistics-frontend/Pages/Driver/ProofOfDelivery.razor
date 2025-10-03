@@ -1,21 +1,44 @@
-@page "/driver/proof"
+@page "/driver/proof/{stopId:guid}"
 @layout MainLayout
 @inject AuthenticationStateProvider AuthProvider
 @inject NavigationManager Navigation 
 @attribute [Authorize(Roles = "driver")]
 
-<h3>Submit delivery Proof</h3>
+<div class="p-6">
+    <h2 class="text-lg font-semibold">Proof of Delivery</h2>
 
-<p>Enter OTP or delivery code:</p>
-<input @bind="ProofCode" placeholder="Enter code" />
-<button @onclick="SubmitProof">Submit</button>
+    <p class="mt-2">Enter OTP or delivery code for this stop:</p>
+    <input @bind="ProofCode" class="border rounded p-2 w-full mt-2" placeholder="Enter code" />
+
+    <button class="mt-4 bg-green-600 text-white px-4 py-2 rounded" 
+            @onclick="SubmitProof">Complete Delivery</button>
+
+    @if (HasArrived)
+    {
+        <p class="mt-4 text-green-600 text-sm">📍 You are at the destination. Ready to confirm.</p>
+    }
+    else
+    {
+        <p class="mt-4 text-gray-500 text-sm">Waiting for arrival…</p>
+    }
+</div>
 
 @code {
+    [Parameter] public Guid stopId { get; set; }
     private string? ProofCode;
+    private bool HasArrived = false;
 
     private void SubmitProof()
     {
-        // You'd normally send this to backend here
-        Console.WriteLine($"Proof submitted: {ProofCode}");
+        Console.WriteLine($"Proof submitted for stop {stopId}: {ProofCode}");
+        // TODO: call backend to confirm delivery
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Later: Poll or subscribe to driver’s current GPS
+        // Example: If within 50m radius of stop coordinates -> HasArrived = true
+        await Task.Delay(1000);
+        HasArrived = false; // Set true when matched
     }
 }

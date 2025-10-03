@@ -28,11 +28,11 @@
                     <td class="px-4 py-2">
                         @InventoryCategories.GetValueOrDefault(order.InventoryID, "Uknown")
                     </td>
-                    <td class="px-4 py-2">@order.PickupLocation</td>
-                    <td class="px-4 py-2">@order.DeliveryLocation</td>
+                    <td class="px-4 py-2">@order.PickupAddress</td>
+                    <td class="px-4 py-2">@order.DeliveryAddress</td>
                     <td class="px-4 py-2">
-                        <span class="@GetStatusClass(order.OrderStatus.ToString())">
-                            @order.OrderStatus
+                        <span class="@GetStatusClass(order.Status.ToString())">
+                            @order.Status
                         </span>
                     </td>
                     <td class="px-4 py-2">@order.CreatedAt.ToString("g")</td>
@@ -50,7 +50,7 @@
         else
         {
             <tr>
-                <td colspan="8" class="text-center text-gray-500 py-4">No orders found.</td>
+                <td colspan="9" class="text-center text-gray-500 py-4">No orders found.</td>
             </tr>
         }
     </tbody>

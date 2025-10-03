@@ -68,16 +68,20 @@ public class InventoryService
         }
 
         var result = await GetAllInventories();
-        if (result.Success)
+        if (result.Success && result.Data != null && result.Data.Any())
         {
             _cachedInventories = result.Data;
             _lastFetchTime = DateTime.UtcNow;
 
             _toastService.ShowToast("Inventories fetched successfully", ToastService.ToastLevel.Success);
         }
+        else if (result.Success && (result.Data == null || !result.Data.Any()))
+        {
+            _toastService.ShowToast("No inventories.", ToastService.ToastLevel.Warning);
+        }
         else
         {
-            _toastService.ShowToast($"Failed to fetch inventories", ToastService.ToastLevel.Error);
+            _toastService.ShowToast($"Failed to fetch inventories.", ToastService.ToastLevel.Error);
             Console.WriteLine($"Fetch Error: {result.ErrorMessage}");
         }
 

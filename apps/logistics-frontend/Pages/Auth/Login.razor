@@ -70,6 +70,7 @@
 
             <!-- Role Selector -->
             <div class="mb-6 flex justify-center items-center space-x-4">
+                <!-- Admin -->
                 <div @onclick="@(() => SelectRole("admin"))"
                     class="relative cursor-pointer border rounded-lg px-6 py-4 text-center w-40 transition duration-200 ease-in-out
                             @(loginModel.Role == "admin" 
@@ -87,6 +88,7 @@
                     <div class="mt-2 font-medium text-black">Admin</div>
                 </div>
 
+                <!-- Customer -->
                 <div @onclick="@(() => SelectRole("customer"))"
                     class="relative cursor-pointer border rounded-lg px-6 py-4 text-center w-40 transition duration-200 ease-in-out
                             @(loginModel.Role == "customer" 
@@ -102,6 +104,25 @@
                     }
                     <div class="text-3xl">🛒</div>
                     <div class="mt-2 font-medium text-black">Customer</div>
+                </div>
+
+                <!-- Driver -->
+                <div @onclick="@(() => SelectRole("driver"))"
+                    class="relative cursor-pointer border rounded-lg px-6 py-4 text-center w-40 transition duration-200 ease-in-out
+                            @(loginModel.Role == "driver" 
+                                ? "border-green-600 border-2 bg-gray-50 shadow-md" 
+                                : "hover:shadow-md hover:border-gray-600 border-gray-300")">
+                    @if (loginModel.Role == "driver")
+                    {
+                        <div class="absolute top-2 right-2 text-green-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                    d="M9 12l2 2l4 -4M12 22a10 10 0 1 1 0 -20a10 10 0 0 1 0 20z" />
+                            </svg>
+                        </div>
+                    }
+                    <div class="text-3xl">🚚</div>
+                    <div class="mt-2 font-medium text-black">Driver</div>
                 </div>
             </div>
 

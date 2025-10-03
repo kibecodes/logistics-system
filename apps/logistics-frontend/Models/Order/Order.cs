@@ -17,15 +17,27 @@ namespace logistics_frontend.Models.Order
         [JsonPropertyName("inventory_id")]
         public Guid InventoryID { get; set; }
 
-        [JsonPropertyName("pickup_location")]
-        public string PickupLocation { get; set; } = string.Empty;
+        [JsonPropertyName("pickup_address")]
+        public string PickupAddress { get; set; } = string.Empty;
 
-        [JsonPropertyName("delivery_location")]
-        public string DeliveryLocation { get; set; } = string.Empty;
+        [JsonPropertyName("pickup_lat")]
+        public double PickupLat { get; set; }
 
-        [JsonPropertyName("order_status")]
+        [JsonPropertyName("pickup_lng")]
+        public double PickupLng { get; set; } 
+
+        [JsonPropertyName("delivery_address")]
+        public string DeliveryAddress { get; set; } = string.Empty;
+
+        [JsonPropertyName("delivery_lat")]
+        public double DeliveryLat { get; set; }
+
+        [JsonPropertyName("delivery_lng")]
+        public double DeliveryLng { get; set; }
+
+        [JsonPropertyName("status")]
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public OrderStatus OrderStatus { get; set; }
+        public OrderStatus Status { get; set; }
 
         [JsonPropertyName("created_at")]
         public DateTime CreatedAt { get; set; }
@@ -44,12 +56,24 @@ namespace logistics_frontend.Models.Order
         public Guid AdminID { get; set; }
 
         [Required(ErrorMessage = "Pickup location is required.")]
-        [JsonPropertyName("pickup_location")]
-        public string PickupLocation { get; set; } = string.Empty;
+        [JsonPropertyName("pickup_address")]
+        public string PickupAddress { get; set; } = string.Empty;
+
+        [JsonPropertyName("pickup_lat")]
+        public double PickupLat { get; set; }
+
+        [JsonPropertyName("pickup_lng")]
+        public double PickupLng { get; set; }
 
         [Required(ErrorMessage = "Delivery location is required.")]
-        [JsonPropertyName("delivery_location")]
-        public string DeliveryLocation { get; set; } = string.Empty;
+        [JsonPropertyName("delivery_address")]
+        public string DeliveryAddress { get; set; } = string.Empty;
+
+        [JsonPropertyName("delivery_lat")]
+        public double DeliveryLat { get; set; }
+
+        [JsonPropertyName("delivery_lng")]
+        public double DeliveryLng { get; set; }
 
         [Required]
         [Range(1, int.MaxValue, ErrorMessage = "Quantity must be at least 1.")]

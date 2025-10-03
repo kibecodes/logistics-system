@@ -2,4 +2,164 @@
 @layout MainLayout
 @attribute [Authorize(Roles = "driver")]
 
-<h3>🚚 Driver Dashboard</h3>
+<div class="p-6 space-y-6">
+
+    <!-- Accept Deliveries Banner -->
+    @if (hasNewAssignments)
+    {
+        <div class="bg-yellow-50 border border-yellow-300 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-yellow-800">New Deliveries Assigned</h3>
+            <p class="text-sm text-gray-600 mb-4">
+                You’ve been assigned @newDeliveries.Count deliveries. Accept them to add to today’s route.
+            </p>
+            <button class="bg-green-600 text-white px-4 py-2 rounded mr-2" @onclick="AcceptDeliveries">Accept</button>
+            <button class="bg-red-500 text-white px-4 py-2 rounded" @onclick="DeclineDeliveries">Decline</button>
+        </div>
+    }
+
+    <!-- Header -->
+    <div>
+        <h2 class="text-2xl font-semibold">🚚 Driver Dashboard</h2>
+        <p class="text-gray-600">Welcome back! Here’s your overview for today.</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white rounded-xl shadow p-4">
+            <h3 class="text-sm text-gray-500">Assigned Deliveries</h3>
+            <p class="text-2xl font-bold">@assignedCount</p>
+        </div>
+        <div class="bg-white rounded-xl shadow p-4">
+            <h3 class="text-sm text-gray-500">Completed</h3>
+            <p class="text-2xl font-bold text-green-600">@completedCount</p>
+        </div>
+        <div class="bg-white rounded-xl shadow p-4">
+            <h3 class="text-sm text-gray-500">Pending</h3>
+            <p class="text-2xl font-bold text-yellow-600">@pendingCount</p>
+        </div>
+    </div>
+
+    <!-- Route & Deliveries -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Today's Route Map -->
+        <div class="lg:col-span-2 bg-white rounded-xl shadow p-4">
+            <h3 class="text-lg font-medium mb-3">Today’s Route</h3>
+            <RealTimeMap @ref="realTimeMap" Parameters="parameters" height="400px" width="100%" />
+        </div>
+
+        <!-- Delivery List -->
+        <div class="bg-white rounded-xl shadow p-4">
+            <h3 class="text-lg font-medium mb-3">Deliveries</h3>
+            <ul class="divide-y divide-gray-200">
+                @foreach (var stop in deliveryStops)
+                {
+                    <li class="py-3">
+                        <div class="flex justify-between">
+                            <span class="font-medium">@stop.Name</span>
+                            <span class="text-sm text-gray-500">@stop.Status</span>
+                        </div>
+                        <p class="text-xs text-gray-500">@stop.Address</p>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RealTimeMap realTimeMap;
+
+    // Simulated backend state
+    private bool hasNewAssignments = true;
+    private List<DeliveryStop> newDeliveries = new()
+    {
+        new DeliveryStop { Name = "Stop 1", Address = "Customer A", Lat = -1.2925, Lng = 36.8220, Status = "Pending" },
+        new DeliveryStop { Name = "Stop 2", Address = "Customer B", Lat = -1.2980, Lng = 36.8290, Status = "Pending" }
+    };
+
+    private int assignedCount => deliveryStops.Count;
+    private int completedCount => deliveryStops.Count(x => x.Status == "Completed");
+    private int pendingCount => deliveryStops.Count(x => x.Status == "Pending");
+
+    private List<DeliveryStop> deliveryStops = new();
+
+    RealTimeMap.LoadParameters parameters = new RealTimeMap.LoadParameters()
+    {
+        basemap = new RealTimeMap.Basemap()
+        {
+            basemapLayers = new List<RealTimeMap.BasemapLayer>()
+            {
+                new RealTimeMap.BasemapLayer()
+                {
+                    url = "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                    attribution = "©Open Street Map",
+                    title = "Open Street Map",
+                    detectRetina = true
+                }
+            }
+        },
+        location = new RealTimeMap.Location()
+        {
+            latitude = -1.29207,
+            longitude = 36.82195,
+        },
+        zoomLevel = 13
+    };
+
+    private async void AcceptDeliveries()
+    {
+        deliveryStops.AddRange(newDeliveries);
+        hasNewAssignments = false;
+
+        StateHasChanged();
+
+        if (realTimeMap != null)
+        {
+            // Update map points after accepting
+            var points = new List<RealTimeMap.StreamPoint>();
+
+            var driverPoint = new RealTimeMap.StreamPoint
+            {
+                guid = Guid.NewGuid(),
+                timestamp = DateTime.UtcNow,
+                latitude = -1.2921,
+                longitude = 36.8219,
+                type = "driver",
+                value = "You"
+            };
+            points.Add(driverPoint);
+
+            foreach (var stop in deliveryStops)
+            {
+                points.Add(new RealTimeMap.StreamPoint
+                {
+                    guid = Guid.NewGuid(),
+                    timestamp = DateTime.UtcNow,
+                    latitude = stop.Lat,
+                    longitude = stop.Lng,
+                    type = "destination",
+                    value = stop.Name
+                });
+            }
+
+            await realTimeMap.Geometric.Points.upload(points, true);
+        }
+    }
+
+    private void DeclineDeliveries()
+    {
+        hasNewAssignments = false;
+        newDeliveries.Clear();
+        // TODO: notify backend so dispatcher can reassign
+        StateHasChanged();
+    }
+
+    private class DeliveryStop
+    {
+        public string Name { get; set; }
+        public string Address { get; set; }
+        public double Lat { get; set; }
+        public double Lng { get; set; }
+        public string Status { get; set; }
+    }
+}

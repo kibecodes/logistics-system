@@ -39,10 +39,9 @@ public class OrderService
         }
     }
 
-    public async Task<List<Order>> GetOrderByID(Guid id)
+    public async Task<ServiceResult<List<Order>>> GetOrderByID(Guid id)
     {
-        var order = await _http.GetFromJsonAsync<List<Order>>($"orders/by-id/{id}");
-        return order ?? new List<Order>();
+        return await GetFromJsonSafe<List<Order>>($"orders/by-id/{id}");
     }
 
 
@@ -89,16 +88,22 @@ public class OrderService
         }
 
         var result = await GetAllOrders();
-        if (result.Success)
+        if (result.Success && result.Data != null && result.Data.Any())
         {
             _cachedOrders = result.Data;
             _lastFetchTime = DateTime.UtcNow;
 
             _toastService.ShowToast("Orders fetched successfully.", ToastService.ToastLevel.Success);
         }
+        else if (result.Success && (result.Data == null || !result.Data.Any()))
+        {
+            _toastService.ShowToast("No orders.", ToastService.ToastLevel.Warning);
+        }
         else
         {
-            _toastService.ShowToast("Failed to load orders.", ToastService.ToastLevel.Error);
+            var msg = result.ErrorMessage ?? "Failed to load orders.";
+            _toastService.ShowToast(msg, ToastService.ToastLevel.Error);
+            Console.WriteLine($"error msg: {msg}");
         }
 
         return result;
@@ -129,7 +134,21 @@ public class OrderService
                 PropertyNameCaseInsensitive = true
             });
 
-            return error?.Detail ?? "Unknown error occurred.";
+            if (error == null)
+                return $"HTTP {(int)response.StatusCode} - {response.ReasonPhrase}";
+
+            if (error.Errors != null && error.Errors.Any())
+            {
+                // Flatten field-level errors: "PickupAddress: Required"
+                var fieldErrors = error.Errors
+                    .SelectMany(kvp => kvp.Value.Select(v => $"{kvp.Key}: {v}"));
+                return string.Join("; ", fieldErrors);
+            }
+            
+            // Fall back to detail or generic error
+            return !string.IsNullOrWhiteSpace(error.Detail)
+                ? error.Detail
+                : error.Error ?? $"HTTP {(int)response.StatusCode} - {response.ReasonPhrase}";
         }
         catch
         {
