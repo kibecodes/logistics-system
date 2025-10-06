@@ -3,6 +3,7 @@ package order
 import (
 	"context"
 
+	"github.com/cridenour/go-postgis"
 	"github.com/google/uuid"
 )
 
@@ -13,4 +14,7 @@ type Repository interface {
 	Update(ctx context.Context, orderID uuid.UUID, column string, value any) error // PATCH method to update specified column value in orders table.
 	List(ctx context.Context) ([]*Order, error)                                    // GET method for fetching all orders
 	Delete(ctx context.Context, id uuid.UUID) error                                // DELETE method for removing order by id
+
+	GetPickupPoint(ctx context.Context, orderID uuid.UUID) (postgis.PointS, error)
+	GetDeliveryPoint(ctx context.Context, orderID uuid.UUID) (postgis.PointS, error)
 }

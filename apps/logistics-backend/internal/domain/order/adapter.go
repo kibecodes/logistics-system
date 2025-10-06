@@ -2,8 +2,10 @@ package order
 
 import (
 	"context"
+	"logistics-backend/internal/domain/driver"
 	"logistics-backend/internal/domain/inventory"
 
+	"github.com/cridenour/go-postgis"
 	"github.com/google/uuid"
 )
 
@@ -19,4 +21,8 @@ type InventoryReader interface {
 // Access the user domain usecase method for getting users of role customers.
 type CustomerReader interface {
 	GetAllCustomers(ctx context.Context) ([]Customer, error)
+}
+
+type DriverReader interface {
+	GetNearestDriver(ctx context.Context, pickup postgis.PointS, maxDistance float64) (*driver.Driver, error)
 }

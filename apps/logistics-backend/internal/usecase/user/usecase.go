@@ -8,6 +8,7 @@ import (
 	"logistics-backend/internal/usecase/common"
 	"time"
 
+	"github.com/cridenour/go-postgis"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -41,13 +42,17 @@ func (uc *UseCase) RegisterUser(ctx context.Context, u *domain.User) error {
 		// 3. if role is driver, insert into drivers table
 		if u.Role == "driver" {
 			driver := &driver.Driver{
-				ID:              u.ID,
-				FullName:        u.FullName,
-				Email:           u.Email,
-				VehicleInfo:     "not set",
-				CurrentLocation: "not set",
-				Available:       true,
-				CreatedAt:       time.Now(),
+				ID:          u.ID,
+				FullName:    u.FullName,
+				Email:       u.Email,
+				VehicleInfo: "not set",
+				CurrentLocation: postgis.PointS{
+					SRID: 4326,
+					X:    36.8219, // longitude
+					Y:    -1.2921, // latitude
+				},
+				Available: true,
+				CreatedAt: time.Now(),
 			}
 			if err := uc.drvRepo.RegisterDriver(txCtx, driver); err != nil {
 				return fmt.Errorf("could not register driver: %w", err)

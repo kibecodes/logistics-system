@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:15
+    image: postgis/postgis:15-3.5  # Postgres 15 with PostGIS 3.5
     container_name: logistics_postgres
     environment:
       POSTGRES_USER: admin

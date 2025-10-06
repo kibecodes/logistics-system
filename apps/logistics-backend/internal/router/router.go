@@ -105,7 +105,6 @@ func NewRouter(
 
 			// Drivers
 			r.Route("/drivers", func(r chi.Router) {
-				r.Post("/create", d.CreateDriver)
 				r.Get("/all_drivers", d.ListDrivers)
 				r.Get("/by-id/{id}", d.GetDriverByID)
 				r.Get("/by-email/{email}", d.GetDriverByEmail)
@@ -116,7 +115,6 @@ func NewRouter(
 
 			// Deliveries
 			r.Route("/deliveries", func(r chi.Router) {
-				r.Post("/create", e.CreateDelivery)
 				r.Get("/all_deliveries", e.ListDeliveries)
 				r.Get("/by-id/{id}", e.GetDeliveryByID)
 				r.Put("/{id}/update", e.UpdateDelivery)

@@ -23,53 +23,6 @@ func NewDeliveryHandler(uc *application.OrderService) *DeliveryHandler {
 	return &DeliveryHandler{UC: uc}
 }
 
-// CreateDelivery godoc
-// @Summary Create a new delivery
-// @Security JWT
-// @Description Create a new delivery with order_id, driver_id, etc.
-// @Tags deliveries
-// @Accept  json
-// @Produce  json
-// @Param user body delivery.CreateDeliveryRequest true "User Input"
-// @Success 201 {object} delivery.Delivery
-// @Failure 400 {string} handlers.ErrorResponse "Invalid request"
-// @Failure 500 {string} handlers.ErrorResponse "Failed to create delivery"
-// @Router /deliveries/create [post]
-func (h *DeliveryHandler) CreateDelivery(w http.ResponseWriter, r *http.Request) {
-	var req *delivery.CreateDeliveryRequest
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "Invalid request", nil)
-		return
-	}
-
-	d := req.ToDelivery()
-
-	if err := h.UC.Deliveries.UseCase.CreateDelivery(r.Context(), d); err != nil {
-		log.Printf("create delivery failed: %v", err)
-
-		switch err {
-		case delivery.ErrorNoPendingOrder:
-			writeJSONError(w, http.StatusConflict, "No pending orders", err)
-		default:
-			writeJSONError(w, http.StatusInternalServerError, "could not create delivery", err)
-		}
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusAccepted)
-	json.NewEncoder(w).Encode(map[string]any{
-		"id":           d.ID,
-		"order_id":     d.OrderID,
-		"driver_id":    d.DriverID,
-		"assigned_at":  d.AssignedAt,
-		"picked_up_at": d.PickedUpAt,
-		"delivered_at": d.DeliveredAt,
-		"status":       d.Status,
-	})
-}
-
 // GetDeliveryByID godoc
 // @Summary Get delivery by ID
 // @Security JWT
@@ -198,13 +151,13 @@ func (h *DeliveryHandler) DeleteDelivery(w http.ResponseWriter, r *http.Request)
 }
 
 // AcceptDelivery godoc
-// @Summary Accept and mark delivery as picked up
-// @Description Updates delivery status to 'picked up' and sets the pickup timestamp. Only callable by authenticated drivers.
+// @Summary Accept order assignment and create delivery
+// @Description When a driver accepts an order assignment, this endpoint creates the delivery record, marks the order as in-transit, sets the pickup timestamp, and marks the driver as unavailable. Only callable by authenticated drivers.
 // @Tags deliveries
 // @Security JWT
 // @Produce json
-// @Param id query string true "Delivery ID"
-// @Success 200 {object} delivery.Delivery
+// @Param id path string true "Delivery ID (corresponds to the order assignment)"
+// @Success 200 {object} delivery.Delivery "Created and accepted delivery"
 // @Failure 400 {object} handlers.ErrorResponse "Missing or invalid delivery ID"
 // @Failure 401 {object} handlers.ErrorResponse "Unauthorized"
 // @Failure 500 {object} handlers.ErrorResponse "Failed to accept delivery"

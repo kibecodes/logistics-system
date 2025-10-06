@@ -6,6 +6,7 @@ import (
 	"logistics-backend/internal/application"
 	"logistics-backend/internal/domain/order"
 
+	"github.com/cridenour/go-postgis"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
@@ -27,9 +28,18 @@ func (r *OrderRepository) execFromCtx(ctx context.Context) sqlx.ExtContext {
 
 func (r *OrderRepository) Create(ctx context.Context, o *order.Order) error {
 	query := `
-		INSERT INTO orders (admin_id, user_id, inventory_id, quantity, pickup_address, delivery_address, status)
-		VALUES (:admin_id, :user_id, :inventory_id, :quantity, :pickup_address, :delivery_address, :status)
-		RETURNING id
+		INSERT INTO orders (
+		admin_id, user_id, inventory_id, quantity,
+		pickup_address, pickup_point,
+		delivery_address, delivery_point,
+		status
+	) VALUES (
+		:admin_id, :user_id, :inventory_id, :quantity,
+		:pickup_address, ST_SetSRID(ST_MakePoint(:pickup_point.x, :pickup_point.y), 4326),
+		:delivery_address, ST_SetSRID(ST_MakePoint(:delivery_point.x, :delivery_point.y), 4326),
+		:status
+	)
+	RETURNING id
 	`
 
 	rows, err := sqlx.NamedQueryContext(ctx, r.execFromCtx(ctx), query, o)
@@ -51,7 +61,7 @@ func (r *OrderRepository) Create(ctx context.Context, o *order.Order) error {
 
 func (r *OrderRepository) GetByID(ctx context.Context, id uuid.UUID) (*order.Order, error) {
 	query := `
-		SELECT id, user_id, admin_id, inventory_id, quantity, pickup_address, delivery_address, status, created_at, updated_at 
+		SELECT id, user_id, admin_id, inventory_id, quantity, pickup_address, pickup_point, delivery_address, delivery_point, status, created_at, updated_at 
 		FROM orders 
 		WHERE id = $1
 	`
@@ -66,7 +76,7 @@ func (r *OrderRepository) GetByID(ctx context.Context, id uuid.UUID) (*order.Ord
 
 func (r *OrderRepository) ListByCustomer(ctx context.Context, customerID uuid.UUID) ([]*order.Order, error) {
 	query := `
-		SELECT id, user_id, admin_id, inventory_id, quantity, pickup_address, delivery_address, status, created_at, updated_at 
+		SELECT id, user_id, admin_id, inventory_id, quantity, pickup_address, pickup_point, delivery_address, delivery_point, status, created_at, updated_at 
 		FROM orders 
 		WHERE user_id = $1
 	`
@@ -130,7 +140,7 @@ func (r *OrderRepository) Update(ctx context.Context, orderID uuid.UUID, column 
 
 func (r *OrderRepository) List(ctx context.Context) ([]*order.Order, error) {
 	query := `
-		SELECT id, user_id, admin_id, inventory_id, quantity, pickup_address, delivery_address, status, created_at, updated_at 
+		SELECT id, user_id, admin_id, inventory_id, quantity, pickup_address, delivery_address, status, created_at, updated_at, pickup_point, delivery_point
 		FROM orders
 	`
 
@@ -160,4 +170,32 @@ func (r *OrderRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	return nil
+}
+
+func (r *OrderRepository) GetPickupPoint(ctx context.Context, orderID uuid.UUID) (postgis.PointS, error) {
+	var pt postgis.PointS
+	query := `
+        SELECT pickup_point
+        FROM orders
+        WHERE id = $1
+    `
+	err := sqlx.GetContext(ctx, r.execFromCtx(ctx), &pt, query, orderID)
+	if err != nil {
+		return postgis.PointS{}, fmt.Errorf("get pickup point: %w", err)
+	}
+	return pt, nil
+}
+
+func (r *OrderRepository) GetDeliveryPoint(ctx context.Context, orderID uuid.UUID) (postgis.PointS, error) {
+	var pt postgis.PointS
+	query := `
+        SELECT delivery_point
+        FROM orders
+        WHERE id = $1
+    `
+	err := sqlx.GetContext(ctx, r.execFromCtx(ctx), &pt, query, orderID)
+	if err != nil {
+		return postgis.PointS{}, fmt.Errorf("get delivery point: %w", err)
+	}
+	return pt, nil
 }

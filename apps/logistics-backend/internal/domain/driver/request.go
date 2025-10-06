@@ -1,15 +1,19 @@
 package driver
 
+import (
+	"github.com/cridenour/go-postgis"
+)
+
 type CreateDriverRequest struct {
-	FullName        string `json:"full_name" binding:"required"`
-	Email           string `json:"email" binding:"required"`
-	VehicleInfo     string `json:"vehicle_info" binding:"required"`
-	CurrentLocation string `json:"current_location" binding:"required"`
+	FullName        string         `json:"full_name" binding:"required"`
+	Email           string         `json:"email" binding:"required"`
+	VehicleInfo     string         `json:"vehicle_info" binding:"required"`
+	CurrentLocation postgis.PointS `json:"current_location" binding:"required"`
 }
 
 type UpdateDriverProfileRequest struct {
-	VehicleInfo     string `json:"vehicle_info" binding:"required"`
-	CurrentLocation string `json:"current_location" binding:"required"`
+	VehicleInfo     string         `json:"vehicle_info" binding:"required"`
+	CurrentLocation postgis.PointS `json:"current_location" binding:"required"`
 }
 
 type UpdateDriverRequest struct {

@@ -89,57 +89,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/deliveries/create": {
-            "post": {
-                "security": [
-                    {
-                        "JWT": []
-                    }
-                ],
-                "description": "Create a new delivery with order_id, driver_id, etc.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "deliveries"
-                ],
-                "summary": "Create a new delivery",
-                "parameters": [
-                    {
-                        "description": "User Input",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/delivery.CreateDeliveryRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/delivery.Delivery"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to create delivery",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
         "/deliveries/{id}": {
             "delete": {
                 "security": [
@@ -199,26 +148,26 @@ const docTemplate = `{
                         "JWT": []
                     }
                 ],
-                "description": "Updates delivery status to 'picked up' and sets the pickup timestamp. Only callable by authenticated drivers.",
+                "description": "When a driver accepts an order assignment, this endpoint creates the delivery record, marks the order as in-transit, sets the pickup timestamp, and marks the driver as unavailable. Only callable by authenticated drivers.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "deliveries"
                 ],
-                "summary": "Accept and mark delivery as picked up",
+                "summary": "Accept order assignment and create delivery",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Delivery ID",
+                        "description": "Delivery ID (corresponds to the order assignment)",
                         "name": "id",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Created and accepted delivery",
                         "schema": {
                             "$ref": "#/definitions/delivery.Delivery"
                         }
@@ -2375,20 +2324,6 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "delivery.CreateDeliveryRequest": {
-            "type": "object",
-            "properties": {
-                "driver_id": {
-                    "type": "string"
-                },
-                "order_id": {
-                    "type": "string"
-                },
-                "status": {
-                    "$ref": "#/definitions/delivery.DeliveryStatus"
-                }
-            }
-        },
         "delivery.Delivery": {
             "type": "object",
             "properties": {
@@ -2424,10 +2359,10 @@ const docTemplate = `{
                 "failed"
             ],
             "x-enum-varnames": [
-                "DeliveryAssigned",
-                "DeliveryPickedUp",
-                "DeliveryDelivered",
-                "DeliveryFailed"
+                "Assigned",
+                "PickedUp",
+                "Delivered",
+                "Failed"
             ]
         },
         "delivery.UpdateDeliveryRequest": {
@@ -2453,7 +2388,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "current_location": {
-                    "type": "string"
+                    "$ref": "#/definitions/dto.PointDTO"
                 },
                 "email": {
                     "type": "string"
@@ -2476,7 +2411,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "current_location": {
-                    "type": "string"
+                    "$ref": "#/definitions/dto.PointDTO"
                 },
                 "email": {
                     "type": "string"
@@ -2503,6 +2438,23 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "value": {}
+            }
+        },
+        "dto.PointDTO": {
+            "type": "object",
+            "properties": {
+                "srid": {
+                    "type": "integer",
+                    "example": 4326
+                },
+                "x": {
+                    "type": "number",
+                    "example": 36.8219
+                },
+                "y": {
+                    "type": "number",
+                    "example": -1.2921
+                }
             }
         },
         "feedback.CreateFeedbackRequest": {
@@ -2569,7 +2521,8 @@ const docTemplate = `{
                 "location",
                 "name",
                 "packaging",
-                "price",
+                "price_amount",
+                "price_currency",
                 "slug",
                 "stock",
                 "unit"
@@ -2602,8 +2555,11 @@ const docTemplate = `{
                     "description": "“Bucket/Single”",
                     "type": "string"
                 },
-                "price": {
-                    "$ref": "#/definitions/money.Money"
+                "price_amount": {
+                    "type": "integer"
+                },
+                "price_currency": {
+                    "type": "string"
                 },
                 "slug": {
                     "type": "string"
@@ -2653,8 +2609,11 @@ const docTemplate = `{
                     "description": "“Bucket/Single”",
                     "type": "string"
                 },
-                "price": {
-                    "$ref": "#/definitions/money.Money"
+                "price_amount": {
+                    "type": "integer"
+                },
+                "price_currency": {
+                    "type": "string"
                 },
                 "slug": {
                     "description": "product slug",
@@ -2850,9 +2809,7 @@ const docTemplate = `{
             "required": [
                 "admin_id",
                 "customer_id",
-                "delivery_location",
                 "inventory_id",
-                "pickup_location",
                 "quantity"
             ],
             "properties": {
@@ -2862,14 +2819,20 @@ const docTemplate = `{
                 "customer_id": {
                     "type": "string"
                 },
-                "delivery_location": {
+                "delivery_address": {
                     "type": "string"
+                },
+                "delivery_point": {
+                    "$ref": "#/definitions/dto.PointDTO"
                 },
                 "inventory_id": {
                     "type": "string"
                 },
-                "pickup_location": {
+                "pickup_address": {
                     "type": "string"
+                },
+                "pickup_point": {
+                    "$ref": "#/definitions/dto.PointDTO"
                 },
                 "quantity": {
                     "type": "integer"
@@ -2910,6 +2873,9 @@ const docTemplate = `{
                 "admin_id": {
                     "type": "string"
                 },
+                "category": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -2930,8 +2896,11 @@ const docTemplate = `{
                 "customer_id": {
                     "type": "string"
                 },
-                "delivery_location": {
+                "delivery_address": {
                     "type": "string"
+                },
+                "delivery_point": {
+                    "$ref": "#/definitions/dto.PointDTO"
                 },
                 "id": {
                     "type": "string"
@@ -2939,14 +2908,17 @@ const docTemplate = `{
                 "inventory_id": {
                     "type": "string"
                 },
-                "order_status": {
-                    "$ref": "#/definitions/order.OrderStatus"
-                },
-                "pickup_location": {
+                "pickup_address": {
                     "type": "string"
+                },
+                "pickup_point": {
+                    "$ref": "#/definitions/dto.PointDTO"
                 },
                 "quantity": {
                     "type": "integer"
+                },
+                "status": {
+                    "$ref": "#/definitions/order.OrderStatus"
                 },
                 "updated_at": {
                     "type": "string"

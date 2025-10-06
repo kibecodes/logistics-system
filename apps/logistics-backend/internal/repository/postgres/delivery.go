@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
 type DeliveryRepository struct {
@@ -130,6 +131,18 @@ func (r *DeliveryRepository) List(ctx context.Context) ([]*delivery.Delivery, er
 	var deliveries []*delivery.Delivery
 
 	err := sqlx.SelectContext(ctx, r.exec, &deliveries, query)
+	return deliveries, err
+}
+
+func (r *DeliveryRepository) ListByStatus(ctx context.Context, statuses []delivery.DeliveryStatus) ([]*delivery.Delivery, error) {
+	query := `
+		SELECT id, order_id, driver_id, assigned_at, picked_up_at, delivered_at, status 
+		FROM deliveries
+		WHERE status = ANY($1)
+	`
+	var deliveries []*delivery.Delivery
+
+	err := sqlx.SelectContext(ctx, r.exec, &deliveries, query, pq.Array(statuses))
 	return deliveries, err
 }
 

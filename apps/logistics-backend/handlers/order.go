@@ -61,16 +61,16 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]any{
-		"id":                o.ID,
-		"admin_id":          o.AdminID,
-		"customer_id":       o.CustomerID,
-		"inventory_id":      o.InventoryID,
-		"quantity":          o.Quantity,
-		"pickup_location":   o.PickupLocation,
-		"delivery_location": o.DeliveryLocation,
-		"order_status":      o.OrderStatus,
-		"created_at":        o.CreatedAt,
-		"updated_at":        o.UpdatedAt,
+		"id":               o.ID,
+		"admin_id":         o.AdminID,
+		"customer_id":      o.CustomerID,
+		"inventory_id":     o.InventoryID,
+		"quantity":         o.Quantity,
+		"pickup_address":   o.PickupAddress,
+		"delivery_address": o.DeliveryAddress,
+		"order_status":     o.Status,
+		"created_at":       o.CreatedAt,
+		"updated_at":       o.UpdatedAt,
 	})
 }
 

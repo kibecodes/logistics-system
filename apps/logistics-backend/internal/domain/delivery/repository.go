@@ -13,4 +13,6 @@ type Repository interface {
 	Update(ctx context.Context, deliveryID uuid.UUID, column string, value any) error // PUT generic method to update specified column value in orders table
 	Accept(ctx context.Context, d *Delivery) error                                    // PATCH method for driver to accept delivery.
 	Delete(ctx context.Context, id uuid.UUID) error                                   // DELETE method to remove delivery by ID
+
+	ListByStatus(ctx context.Context, statuses []DeliveryStatus) ([]*Delivery, error)
 }

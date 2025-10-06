@@ -6,6 +6,7 @@ import (
 	domain "logistics-backend/internal/domain/driver"
 	"logistics-backend/internal/usecase/common"
 
+	"github.com/cridenour/go-postgis"
 	"github.com/google/uuid"
 )
 
@@ -18,9 +19,7 @@ func NewUseCase(repo domain.Repository, txm common.TxManager) *UseCase {
 	return &UseCase{repo: repo, txManager: txm}
 }
 
-// -- might not actually need this.
 func (uc *UseCase) RegisterDriver(ctx context.Context, d *domain.Driver) error {
-	// Validate required fields
 	if d.ID == uuid.Nil {
 		return domain.ErrMissingUserID
 	}
@@ -76,6 +75,10 @@ func (uc *UseCase) ListDrivers(ctx context.Context) ([]*domain.Driver, error) {
 	return uc.repo.List(ctx)
 }
 
+func (uc *UseCase) ListAvailableDrivers(ctx context.Context, available bool) ([]*domain.Driver, error) {
+	return uc.repo.ListAvailableDrivers(ctx, available)
+}
+
 func (uc *UseCase) DeleteDriver(ctx context.Context, id uuid.UUID) error {
 	return uc.txManager.Do(ctx, func(txCtx context.Context) error {
 		if err := uc.repo.Delete(txCtx, id); err != nil {
@@ -84,4 +87,8 @@ func (uc *UseCase) DeleteDriver(ctx context.Context, id uuid.UUID) error {
 
 		return nil
 	})
+}
+
+func (uc *UseCase) GetClosestDriver(ctx context.Context, pickup postgis.PointS, maxDistance float64) (*domain.Driver, error) {
+	return uc.repo.GetNearestDriver(ctx, pickup, maxDistance)
 }

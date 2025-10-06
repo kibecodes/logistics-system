@@ -20,53 +20,6 @@ func NewDriverHandler(uc *application.OrderService) *DriverHandler {
 	return &DriverHandler{UC: uc}
 }
 
-// CreateDriver godoc
-// @Summary Create a new driver
-// @Security JWT
-// @Description Register a new driver with name, email, etc.
-// @Tags drivers
-// @Accept  json
-// @Produce  json
-// @Param user body driver.CreateDriverRequest true "User Input"
-// @Success 201 {object} driver.Driver
-// @Failure 400 {string} handlers.ErrorResponse "Invalid request"
-// @Failure 500 {string} handlers.ErrorResponse "Failed to create driver"
-// @Router /drivers/create [post]
-func (h *DriverHandler) CreateDriver(w http.ResponseWriter, r *http.Request) {
-	var req driver.CreateDriverRequest
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "Invalid request", nil)
-		return
-	}
-
-	// Basic validation
-	if req.FullName == "" || req.VehicleInfo == "" || req.CurrentLocation == "" {
-		writeJSONError(w, http.StatusBadRequest, "Missing required fields", nil)
-		return
-	}
-
-	d := req.ToDriver()
-
-	if err := h.UC.Drivers.RegisterDriver(r.Context(), d); err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "Could not create driver", err)
-		return
-	}
-
-	w.WriteHeader(http.StatusAccepted)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": "Driver profile created"})
-	json.NewEncoder(w).Encode(map[string]any{
-		"id":               d.ID,
-		"full_name":        d.FullName,
-		"email":            d.Email,
-		"vehicle_info":     d.VehicleInfo,
-		"current_location": d.CurrentLocation,
-		"available":        d.Available,
-		"created_at":       d.CreatedAt,
-	})
-}
-
 // UpdateDriverProfile godoc
 // @Summary Update driver profile
 // @Description Updates the vehicle information and current location of a driver

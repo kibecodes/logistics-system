@@ -6,6 +6,7 @@ import (
 	"logistics-backend/internal/application"
 	"logistics-backend/internal/domain/driver"
 
+	"github.com/cridenour/go-postgis"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
@@ -49,15 +50,19 @@ func (r *DriverRepository) Create(ctx context.Context, d *driver.Driver) error {
 	return nil
 }
 
-func (r *DriverRepository) UpdateProfile(ctx context.Context, driverID uuid.UUID, vehicleInfo string, currentLocation string) error {
+func (r *DriverRepository) UpdateProfile(ctx context.Context, driverID uuid.UUID, vehicleInfo string, currentLocation postgis.PointS) error {
 	query := `
 		UPDATE drivers 
 		SET vehicle_info = :vehicle, current_location = :location
 		WHERE id = :id
 	`
+
+	// Prepare WKT string
+	wkt := fmt.Sprintf("SRID=%d;POINT(%f %f)", currentLocation.SRID, currentLocation.X, currentLocation.Y)
+
 	args := map[string]interface{}{
 		"vehicle":  vehicleInfo,
-		"location": currentLocation,
+		"location": wkt,
 		"id":       driverID,
 	}
 
@@ -153,6 +158,18 @@ func (r *DriverRepository) List(ctx context.Context) ([]*driver.Driver, error) {
 	return drivers, err
 }
 
+func (r *DriverRepository) ListAvailableDrivers(ctx context.Context, available bool) ([]*driver.Driver, error) {
+	query := `
+		SELECT id, full_name, email, vehicle_info, current_location, available, created_at 
+		FROM drivers
+		WHERE available = $1
+	`
+
+	var drivers []*driver.Driver
+	err := sqlx.SelectContext(ctx, r.execFromCtx(ctx), &drivers, query, available)
+	return drivers, err
+}
+
 func (r *DriverRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query := `
 		DELETE FROM drivers 
@@ -173,5 +190,19 @@ func (r *DriverRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	return nil
+}
 
+func (r *DriverRepository) GetNearestDriver(ctx context.Context, pickup postgis.PointS, maxDistance float64) (*driver.Driver, error) {
+	query := `
+		SELECT id, full_name, current_location, ST_Distance(current_location, $1) AS dist
+		FROM drivers
+		WHERE available = true
+		AND ST_DWithin(current_location, $1, $2)
+		ORDER BY current_location <-> $1
+		LIMIT 1
+	`
+
+	var d driver.Driver
+	err := sqlx.GetContext(ctx, r.execFromCtx(ctx), &d, query, pickup, maxDistance)
+	return &d, err
 }

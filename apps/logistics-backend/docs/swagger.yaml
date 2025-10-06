@@ -1,14 +1,5 @@
 basePath: /api
 definitions:
-  delivery.CreateDeliveryRequest:
-    properties:
-      driver_id:
-        type: string
-      order_id:
-        type: string
-      status:
-        $ref: '#/definitions/delivery.DeliveryStatus'
-    type: object
   delivery.Delivery:
     properties:
       assigned_at:
@@ -34,10 +25,10 @@ definitions:
     - failed
     type: string
     x-enum-varnames:
-    - DeliveryAssigned
-    - DeliveryPickedUp
-    - DeliveryDelivered
-    - DeliveryFailed
+    - Assigned
+    - PickedUp
+    - Delivered
+    - Failed
   delivery.UpdateDeliveryRequest:
     properties:
       column:
@@ -50,7 +41,7 @@ definitions:
   driver.CreateDriverRequest:
     properties:
       current_location:
-        type: string
+        $ref: '#/definitions/dto.PointDTO'
       email:
         type: string
       full_name:
@@ -70,7 +61,7 @@ definitions:
       created_at:
         type: string
       current_location:
-        type: string
+        $ref: '#/definitions/dto.PointDTO'
       email:
         type: string
       full_name:
@@ -88,6 +79,18 @@ definitions:
     required:
     - column
     - value
+    type: object
+  dto.PointDTO:
+    properties:
+      srid:
+        example: 4326
+        type: integer
+      x:
+        example: 36.8219
+        type: number
+      "y":
+        example: -1.2921
+        type: number
     type: object
   feedback.CreateFeedbackRequest:
     properties:
@@ -148,8 +151,10 @@ definitions:
       packaging:
         description: “Bucket/Single”
         type: string
-      price:
-        $ref: '#/definitions/money.Money'
+      price_amount:
+        type: integer
+      price_currency:
+        type: string
       slug:
         type: string
       stock:
@@ -164,7 +169,8 @@ definitions:
     - location
     - name
     - packaging
-    - price
+    - price_amount
+    - price_currency
     - slug
     - stock
     - unit
@@ -195,8 +201,10 @@ definitions:
       packaging:
         description: “Bucket/Single”
         type: string
-      price:
-        $ref: '#/definitions/money.Money'
+      price_amount:
+        type: integer
+      price_currency:
+        type: string
       slug:
         description: product slug
         type: string
@@ -332,20 +340,22 @@ definitions:
         type: string
       customer_id:
         type: string
-      delivery_location:
+      delivery_address:
         type: string
+      delivery_point:
+        $ref: '#/definitions/dto.PointDTO'
       inventory_id:
         type: string
-      pickup_location:
+      pickup_address:
         type: string
+      pickup_point:
+        $ref: '#/definitions/dto.PointDTO'
       quantity:
         type: integer
     required:
     - admin_id
     - customer_id
-    - delivery_location
     - inventory_id
-    - pickup_location
     - quantity
     type: object
   order.Customer:
@@ -370,6 +380,8 @@ definitions:
     properties:
       admin_id:
         type: string
+      category:
+        type: string
       id:
         type: string
       name:
@@ -383,18 +395,22 @@ definitions:
         type: string
       customer_id:
         type: string
-      delivery_location:
+      delivery_address:
         type: string
+      delivery_point:
+        $ref: '#/definitions/dto.PointDTO'
       id:
         type: string
       inventory_id:
         type: string
-      order_status:
-        $ref: '#/definitions/order.OrderStatus'
-      pickup_location:
+      pickup_address:
         type: string
+      pickup_point:
+        $ref: '#/definitions/dto.PointDTO'
       quantity:
         type: integer
+      status:
+        $ref: '#/definitions/order.OrderStatus'
       updated_at:
         type: string
     type: object
@@ -631,11 +647,12 @@ paths:
       - deliveries
   /deliveries/{id}/accept:
     put:
-      description: Updates delivery status to 'picked up' and sets the pickup timestamp.
-        Only callable by authenticated drivers.
+      description: When a driver accepts an order assignment, this endpoint creates
+        the delivery record, marks the order as in-transit, sets the pickup timestamp,
+        and marks the driver as unavailable. Only callable by authenticated drivers.
       parameters:
-      - description: Delivery ID
-        in: query
+      - description: Delivery ID (corresponds to the order assignment)
+        in: path
         name: id
         required: true
         type: string
@@ -643,7 +660,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Created and accepted delivery
           schema:
             $ref: '#/definitions/delivery.Delivery'
         "400":
@@ -660,7 +677,7 @@ paths:
             $ref: '#/definitions/handlers.ErrorResponse'
       security:
       - JWT: []
-      summary: Accept and mark delivery as picked up
+      summary: Accept order assignment and create delivery
       tags:
       - deliveries
   /deliveries/{id}/update:
@@ -750,38 +767,6 @@ paths:
       security:
       - JWT: []
       summary: Get delivery by ID
-      tags:
-      - deliveries
-  /deliveries/create:
-    post:
-      consumes:
-      - application/json
-      description: Create a new delivery with order_id, driver_id, etc.
-      parameters:
-      - description: User Input
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/delivery.CreateDeliveryRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/delivery.Delivery'
-        "400":
-          description: Invalid request
-          schema:
-            type: string
-        "500":
-          description: Failed to create delivery
-          schema:
-            type: string
-      security:
-      - JWT: []
-      summary: Create a new delivery
       tags:
       - deliveries
   /drivers/{id}:

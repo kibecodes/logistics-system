@@ -10,9 +10,18 @@ import (
 	inventoryadapter "logistics-backend/internal/adapters/inventory"
 	orderadapter "logistics-backend/internal/adapters/order"
 	useradapter "logistics-backend/internal/adapters/user"
+	"sort"
+
+	"logistics-backend/internal/domain/driver"
+	order "logistics-backend/internal/domain/order"
 
 	"github.com/google/uuid"
 )
+
+type Assignment struct {
+	Order  *order.Order
+	Driver *driver.Driver
+}
 
 type OrderService struct {
 	Users       *useradapter.UseCaseAdapter
@@ -77,16 +86,6 @@ func (s *OrderService) GetOrderWithDriver(ctx context.Context, orderID uuid.UUID
 	}{Order: order, Delivery: delivery, Driver: driver}, nil
 }
 
-func (s *OrderService) UpdateOrderAndDriver(ctx context.Context, orderID uuid.UUID, driverID uuid.UUID, column string, value any) error {
-	if err := s.Orders.UpdateOrder(ctx, orderID, column, value); err != nil {
-		return fmt.Errorf("update order: %w", err)
-	}
-	if err := s.Drivers.UpdateDriverAvailability(ctx, driverID, "available", false); err != nil {
-		return fmt.Errorf("update driver: %w", err)
-	}
-	return nil
-}
-
 func (s *OrderService) GetCustomersAndInventories(ctx context.Context) (any, error) {
 	customers, err := s.Users.GetAllCustomers(ctx)
 	if err != nil {
@@ -105,4 +104,108 @@ func (s *OrderService) GetCustomersAndInventories(ctx context.Context) (any, err
 		Customers:   customers,
 		Inventories: inventories,
 	}, nil
+}
+
+func (s *OrderService) OrderAssignment(ctx context.Context, maxDistance float64) ([]Assignment, error) {
+	// 1. Fetch all pending orders
+	allOrders, err := s.Orders.UseCase.ListOrders(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fetch all orders failed: %w", err)
+	}
+
+	pendingOrders := filterPendingOrders(allOrders)
+	if len(pendingOrders) == 0 {
+		return nil, fmt.Errorf("no pending orders found")
+	}
+
+	// sort by oldest first
+	sort.Slice(pendingOrders, func(i, j int) bool {
+		return pendingOrders[i].CreatedAt.Before(pendingOrders[j].CreatedAt)
+	})
+
+	// 2. Get available drivers
+	availableDrivers, err := s.Drivers.UseCase.ListAvailableDrivers(ctx, true)
+	if err != nil {
+		return nil, fmt.Errorf("fetch available drivers failed: %w", err)
+	}
+	if len(availableDrivers) == 0 {
+		return nil, fmt.Errorf("no available drivers at the moment")
+	}
+
+	// 3. Get total active deliveries (to gauge load)
+	activeDeliveries, err := s.Deliveries.UseCase.ListActiveDeliveries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fetch active deliveries failed: %w", err)
+	}
+
+	var assignments []Assignment
+	driverCount := len(availableDrivers)
+	deliveryLoadRatio := float64(len(activeDeliveries)) / float64(driverCount)
+
+	// 4. Adaptive assignment strategy
+	for i, o := range pendingOrders {
+		var designatedDriver *driver.Driver
+
+		if deliveryLoadRatio < 0.3 {
+			// Early stage → assign sequentially to spread out first runs
+			designatedDriver = availableDrivers[i%driverCount]
+		} else {
+			// Later stage → assign by proximity to pickup
+			pickupPoint, err := s.Orders.UseCase.GetOrderPickupPoint(ctx, o.ID)
+			if err != nil {
+				continue
+			}
+
+			designatedDriver, err = s.Drivers.UseCase.GetClosestDriver(ctx, pickupPoint, maxDistance)
+			if err != nil || designatedDriver == nil {
+				continue
+			}
+		}
+
+		// 5. Perform assignment via order domain
+		if designatedDriver != nil {
+			_, err := s.Orders.UseCase.AssignOrderToDriver(ctx, o.ID, designatedDriver.ID, maxDistance)
+			if err != nil {
+				continue
+			}
+
+			// ✅ TODO (Future optimization):
+			// Consider grouping or batching assignments by proximity and destination direction.
+			// If multiple orders have similar pickup or delivery coordinates, compare them before assigning.
+			// The goal: reduce redundant driver trips going to the same zone —
+			// effectively load-balancing drivers by route proximity.
+			//
+			// This feature could support an "optimized dispatch mode" for admin control,
+			// minimizing payout per trip by assigning clustered deliveries to fewer drivers.
+			// e.g. two drivers can handle 5 nearby orders instead of sending 5 individually.
+			//
+			// Implementation idea:
+			// - Use spatial clustering (K-Means / ST_ClusterWithin in PostGIS)
+			// - Compute centroid of grouped destinations
+			// - Adjust driver workloads dynamically based on cluster density and availability
+			//
+			// Feature name idea: "Proximity Load Shift" or "Smart Dispatch Optimization"
+
+			assignments = append(assignments, Assignment{
+				Order:  o,
+				Driver: designatedDriver,
+			})
+		}
+	}
+
+	if len(assignments) == 0 {
+		return nil, fmt.Errorf("no assignments were made")
+	}
+
+	return assignments, nil
+}
+
+func filterPendingOrders(orders []*order.Order) []*order.Order {
+	var pending []*order.Order
+	for _, o := range orders {
+		if o.Status == order.Pending {
+			pending = append(pending, o)
+		}
+	}
+	return pending
 }

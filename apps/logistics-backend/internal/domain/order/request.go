@@ -1,16 +1,21 @@
 package order
 
 import (
+	"github.com/cridenour/go-postgis"
 	"github.com/google/uuid"
 )
 
 type CreateOrderRequest struct {
-	AdminID          uuid.UUID `json:"admin_id" binding:"required"`
-	Quantity         int       `json:"quantity" binding:"required"`
-	InventoryID      uuid.UUID `json:"inventory_id" binding:"required"`
-	CustomerID       uuid.UUID `json:"customer_id" binding:"required"`
-	PickupLocation   string    `json:"pickup_location" binding:"required"`
-	DeliveryLocation string    `json:"delivery_location" binding:"required"`
+	AdminID     uuid.UUID `json:"admin_id" binding:"required"`
+	Quantity    int       `json:"quantity" binding:"required"`
+	InventoryID uuid.UUID `json:"inventory_id" binding:"required"`
+	CustomerID  uuid.UUID `json:"customer_id" binding:"required"`
+
+	PickupAddress string         `db:"pickup_address" json:"pickup_address"`
+	PickupPoint   postgis.PointS `db:"pickup_point" json:"pickup_point"`
+
+	DeliveryAddress string         `db:"delivery_address" json:"delivery_address"`
+	DeliveryPoint   postgis.PointS `db:"delivery_point" json:"delivery_point"`
 }
 
 type UpdateOrderRequest struct {
@@ -20,13 +25,13 @@ type UpdateOrderRequest struct {
 
 func (r *CreateOrderRequest) ToOrder() *Order {
 	return &Order{
-		AdminID:          r.AdminID,
-		Quantity:         r.Quantity,
-		InventoryID:      r.InventoryID,
-		CustomerID:       r.CustomerID,
-		PickupLocation:   r.PickupLocation,
-		DeliveryLocation: r.DeliveryLocation,
-		OrderStatus:      Pending,
+		AdminID:         r.AdminID,
+		Quantity:        r.Quantity,
+		InventoryID:     r.InventoryID,
+		CustomerID:      r.CustomerID,
+		PickupAddress:   r.PickupAddress,
+		DeliveryAddress: r.DeliveryAddress,
+		Status:          Pending,
 	}
 }
 

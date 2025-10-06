@@ -14,10 +14,6 @@ type UseCaseAdapter struct {
 	UseCase *driverusecase.UseCase
 }
 
-func (a *UseCaseAdapter) RegisterDriver(ctx context.Context, d *driver.Driver) error {
-	return a.UseCase.RegisterDriver(ctx, d)
-}
-
 func (a *UseCaseAdapter) GetDriverByID(ctx context.Context, id uuid.UUID) (*driver.Driver, error) {
 	if id == uuid.Nil {
 		return nil, fmt.Errorf("no driver id")
