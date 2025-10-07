@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"encoding/json"
+	"logistics-backend/internal/application"
 	"logistics-backend/internal/domain/notification"
-	usecase "logistics-backend/internal/usecase/notification"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -11,11 +11,11 @@ import (
 )
 
 type NotificationHandler struct {
-	NH *usecase.UseCase
+	UC *application.OrderService
 }
 
-func NewNotificationHandler(nh *usecase.UseCase) *NotificationHandler {
-	return &NotificationHandler{NH: nh}
+func NewNotificationHandler(uc *application.OrderService) *NotificationHandler {
+	return &NotificationHandler{UC: uc}
 }
 
 // CreateNotification godoc
@@ -30,7 +30,7 @@ func NewNotificationHandler(nh *usecase.UseCase) *NotificationHandler {
 // @Failure 400 {string} handlers.ErrorResponse "Invalid request"
 // @Failure 500 {string} handlers.ErrorResponse "Failed to create notification"
 // @Router /notifications/create [post]
-func (nh *NotificationHandler) CreateNotification(w http.ResponseWriter, r *http.Request) {
+func (h *NotificationHandler) CreateNotification(w http.ResponseWriter, r *http.Request) {
 	var req *notification.CreateNotificationRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -41,7 +41,7 @@ func (nh *NotificationHandler) CreateNotification(w http.ResponseWriter, r *http
 
 	n := req.ToNotification()
 
-	if err := nh.NH.CreateNotification(r.Context(), n); err != nil {
+	if err := h.UC.Notifications.UseCase.CreateNotification(r.Context(), n); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "Could not create notification", err)
 		return
 	}
@@ -57,28 +57,57 @@ func (nh *NotificationHandler) CreateNotification(w http.ResponseWriter, r *http
 	})
 }
 
-// GetNotificationByID godoc
-// @Summary Get notification by ID
+// UpdateNotificationStatus godoc
+// @Summary Update a notification's status (e.g. mark as sent or read)
 // @Security JWT
-// @Description Retrieve a notification by their ID
+// @Description Update notification status by ID
 // @Tags notifications
-// @Produce  json
+// @Accept json
+// @Produce json
 // @Param id path string true "Notification ID"
-// @Success 200 {object} notification.Notification
-// @Failure 400 {string} handlers.ErrorResponse "Invalid ID"
-// @Failure 404 {string} handlers.ErrorResponse "Notification not found"
-// @Router /notifications/{id} [get]
-func (nh *NotificationHandler) GetNotificationByID(w http.ResponseWriter, r *http.Request) {
+// @Param status body notification.UpdateNotificationStatusRequest true "Status update request"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} handlers.ErrorResponse "Invalid request"
+// @Failure 404 {object} handlers.ErrorResponse "Notification not found"
+// @Failure 500 {object} handlers.ErrorResponse "Failed to update notification"
+// @Router /notifications/{id}/status [patch]
+func (h *NotificationHandler) UpdateNotificationStatus(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
-	notificationID, err := uuid.Parse(idStr)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "Invalid request", nil)
+		writeJSONError(w, http.StatusBadRequest, "Invalid notification ID", err)
 		return
 	}
 
-	n, err := nh.NH.GetNotification(r.Context(), notificationID)
+	var req notification.UpdateNotificationStatusRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	if err := h.UC.Notifications.UseCase.UpdateNotificationStatus(r.Context(), id, req.Status); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "Failed to update status", err)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Notification status updated successfully",
+	})
+}
+
+// ListPendingNotifications godoc
+// @Summary List all pending notifications
+// @Security JWT
+// @Description Get a list of notifications not yet sent
+// @Tags notifications
+// @Produce json
+// @Success 200 {array} notification.Notification
+// @Failure 500 {object} handlers.ErrorResponse
+// @Router /notifications/all_pending_notifications [get]
+func (h *NotificationHandler) ListNotifications(w http.ResponseWriter, r *http.Request) {
+	n, err := h.UC.Notifications.UseCase.ListPendingNotifications(r.Context())
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "No notification found", err)
+		writeJSONError(w, http.StatusInternalServerError, "Could not fetch notifications", err)
 		return
 	}
 
@@ -86,16 +115,26 @@ func (nh *NotificationHandler) GetNotificationByID(w http.ResponseWriter, r *htt
 	json.NewEncoder(w).Encode(n)
 }
 
-// ListNotifications godoc
-// @Summary List all notifications
+// ListUserNotifications godoc
+// @Summary List notifications by user
 // @Security JWT
-// @Description Get a list of all notifications
+// @Description Get all notifications belonging to a user
 // @Tags notifications
-// @Produce  json
+// @Produce json
+// @Param id path string true "User ID"
 // @Success 200 {array} notification.Notification
-// @Router /notifications/all_notifications [get]
-func (nh *NotificationHandler) ListNotification(w http.ResponseWriter, r *http.Request) {
-	n, err := nh.NH.ListNotification(r.Context())
+// @Failure 400 {object} handlers.ErrorResponse
+// @Failure 500 {object} handlers.ErrorResponse
+// @Router /notifications/all_my_notifications/{id} [get]
+func (h *NotificationHandler) ListUserNotifications(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	userID, err := uuid.Parse(idStr)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Invalid user ID", nil)
+		return
+	}
+
+	n, err := h.UC.Notifications.UseCase.ListNotificationsByCustomer(r.Context(), userID)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "Could not fetch notifications", err)
 		return

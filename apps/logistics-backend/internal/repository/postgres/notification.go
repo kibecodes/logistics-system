@@ -27,8 +27,8 @@ func (r *NotificationRepository) execFromCtx(ctx context.Context) sqlx.ExtContex
 
 func (r *NotificationRepository) Create(ctx context.Context, n *notification.Notification) error {
 	query := `
-		INSERT INTO notifications (user_id, message, type)
-		VALUES (:user_id, :message, :type)
+		INSERT INTO notifications (user_id, message, type, status, sent_at)
+		VALUES (:user_id, :message, :type, :status, :sent_at)
 		RETURNING id
 	`
 	rows, err := sqlx.NamedQueryContext(ctx, r.execFromCtx(ctx), query, n)
@@ -48,46 +48,60 @@ func (r *NotificationRepository) Create(ctx context.Context, n *notification.Not
 	return nil
 }
 
-func (r *NotificationRepository) GetByID(ctx context.Context, id uuid.UUID) (*notification.Notification, error) {
+func (r *NotificationRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status notification.NotificationStatus) error {
 	query := `
-		SELECT id, user_id, message, type 
-		FROM notifications 
-		WHERE id = $1
+		UPDATE notifications 
+		SET status = :status, updated_at = NOW() 
+		WHERE id = :id
 	`
 
-	var n notification.Notification
-	err := sqlx.GetContext(ctx, r.execFromCtx(ctx), &n, query, id)
-	return &n, err
-}
+	args := map[string]interface{}{
+		"status": status,
+		"id":     id,
+	}
 
-func (r *NotificationRepository) List(ctx context.Context) ([]*notification.Notification, error) {
-	query := `
-		SELECT id, user_id, message, type 
-		FROM notifications
-	`
-	var notifications []*notification.Notification
-	err := sqlx.GetContext(ctx, r.execFromCtx(ctx), &notifications, query)
-	return notifications, err
-}
-
-func (r *NotificationRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	query := `
-		DELETE FROM notifications 
-		WHERE id = $1
-	`
-	res, err := r.exec.ExecContext(ctx, query, id)
+	res, err := sqlx.NamedExecContext(ctx, r.execFromCtx(ctx), query, args)
 	if err != nil {
-		return fmt.Errorf("failed to delete notification: %w", err)
+		return fmt.Errorf("update notification status: %w", err)
 	}
 
 	rows, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("could not verify notification deletion: %w", err)
+		return fmt.Errorf("rows affected: %w", err)
 	}
-
 	if rows == 0 {
-		return fmt.Errorf("notification already deleted or invalid")
+		return fmt.Errorf("no notification found with id %s", id)
 	}
 
 	return nil
+}
+
+func (r *NotificationRepository) ListPending(ctx context.Context) ([]*notification.Notification, error) {
+	query := `
+		SELECT id, user_id, message, type, status, sent_at, created_at, updated_at
+		FROM notifications
+		WHERE status = 'pending'
+		ORDER BY created_at ASC
+	`
+	var notifications []*notification.Notification
+	err := sqlx.SelectContext(ctx, r.execFromCtx(ctx), &notifications, query)
+	if err != nil {
+		return nil, fmt.Errorf("list pending notifications: %w", err)
+	}
+	return notifications, nil
+}
+
+func (r *NotificationRepository) ListByUser(ctx context.Context, userID uuid.UUID) ([]*notification.Notification, error) {
+	query := `
+		SELECT id, user_id, message, type, status, sent_at, created_at, updated_at
+		FROM notifications
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+	`
+	var notifications []*notification.Notification
+	err := sqlx.SelectContext(ctx, r.execFromCtx(ctx), &notifications, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list notifications by user: %w", err)
+	}
+	return notifications, nil
 }

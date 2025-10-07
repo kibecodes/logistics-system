@@ -9,6 +9,7 @@ import (
 	deliveryadapter "logistics-backend/internal/adapters/delivery"
 	driveradapter "logistics-backend/internal/adapters/driver"
 	inventoryadapter "logistics-backend/internal/adapters/inventory"
+	notificationadapter "logistics-backend/internal/adapters/notification"
 	orderadapter "logistics-backend/internal/adapters/order"
 	useradapter "logistics-backend/internal/adapters/user"
 	"logistics-backend/internal/repository/postgres"
@@ -70,11 +71,12 @@ func main() {
 	// Set up usecase
 	// Individual
 	inviteUC := inviteUsecase.NewUseCase(inviteRepo, txm)
-	driverUC := driverUsecase.NewUseCase(driverRepo, txm)
-	userUC := userUsecase.NewUseCase(userRepo, driverUC, txm)
-	inventoryUC := inventoryUsecase.NewUseCase(inventoryRepo, txm)
-	orderUC := orderUsecase.NewUseCase(orderRepo, &inventoryadapter.UseCaseAdapter{UseCase: inventoryUC}, &useradapter.UseCaseAdapter{UseCase: userUC}, txm)
-	deliveryUC := deliveryUsecase.NewUseCase(deliveryRepo, &orderadapter.UseCaseAdapter{UseCase: orderUC}, &driveradapter.UseCaseAdapter{UseCase: driverUC}, txm)
+	driverUC := driverUsecase.NewUseCase(driverRepo, txm, notificationRepo)
+	userUC := userUsecase.NewUseCase(userRepo, driverUC, txm, notificationRepo)
+	inventoryUC := inventoryUsecase.NewUseCase(inventoryRepo, txm, notificationRepo)
+	orderUC := orderUsecase.NewUseCase(orderRepo, &inventoryadapter.UseCaseAdapter{UseCase: inventoryUC}, &useradapter.UseCaseAdapter{UseCase: userUC}, txm, notificationRepo)
+	deliveryUC := deliveryUsecase.NewUseCase(deliveryRepo, &orderadapter.UseCaseAdapter{UseCase: orderUC}, &driveradapter.UseCaseAdapter{UseCase: driverUC}, txm, notificationRepo)
+	notificationUC := notificationUsecase.NewUseCase(notificationRepo, txm)
 
 	// Combined cross-domain service
 	orderService := application.NewOrderService(
@@ -83,12 +85,12 @@ func main() {
 		&driveradapter.UseCaseAdapter{UseCase: driverUC},
 		&deliveryadapter.UseCaseAdapter{UseCase: deliveryUC},
 		&inventoryadapter.UseCaseAdapter{UseCase: inventoryUC},
+		&notificationadapter.UseCaseAdapter{UseCase: notificationUC},
 	)
 
 	// Other usecases
 	paymentUC := paymentUsecase.NewUseCase(paymentRepo, txm)
 	feedbackUC := feedbackUsecase.NewUseCase(feedbackRepo, txm)
-	notificationUC := notificationUsecase.NewUseCase(notificationRepo, txm)
 
 	// Set up Handlers
 	userHandler := handlers.NewUserHandler(orderService)
@@ -97,7 +99,7 @@ func main() {
 	deliveryHandler := handlers.NewDeliveryHandler(orderService)
 	paymentHandler := handlers.NewPaymentHandler(paymentUC)
 	feedbackHandler := handlers.NewFeedbackHandler(feedbackUC)
-	notificationHandler := handlers.NewNotificationHandler(notificationUC)
+	notificationHandler := handlers.NewNotificationHandler(orderService)
 	inviteHandler := handlers.NewInviteHandler(inviteUC)
 	inventoryHandler := handlers.NewInventoryHandler(orderService)
 

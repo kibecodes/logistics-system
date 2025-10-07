@@ -1,6 +1,10 @@
 package notification
 
-import "github.com/google/uuid"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type CreateNotificationRequest struct {
 	UserID  uuid.UUID        `json:"user_id"`
@@ -8,10 +12,15 @@ type CreateNotificationRequest struct {
 	Type    NotificationType `json:"type"`
 }
 
+type UpdateNotificationStatusRequest struct {
+	Status NotificationStatus `json:"status"`
+}
+
 func (r *CreateNotificationRequest) ToNotification() *Notification {
 	return &Notification{
 		UserID:  r.UserID,
 		Message: r.Message,
 		Type:    r.Type,
+		SentAt:  time.Now(),
 	}
 }

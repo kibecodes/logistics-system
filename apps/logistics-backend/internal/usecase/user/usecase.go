@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"logistics-backend/internal/domain/driver"
+	"logistics-backend/internal/domain/notification"
 	domain "logistics-backend/internal/domain/user"
 	"logistics-backend/internal/usecase/common"
 	"time"
@@ -17,10 +18,11 @@ type UseCase struct {
 	repo      domain.Repository
 	drvRepo   domain.DriverReader
 	txManager common.TxManager
+	notfRepo  domain.NotificationReader
 }
 
-func NewUseCase(repo domain.Repository, drvRepo domain.DriverReader, txm common.TxManager) *UseCase {
-	return &UseCase{repo: repo, drvRepo: drvRepo, txManager: txm}
+func NewUseCase(repo domain.Repository, drvRepo domain.DriverReader, txm common.TxManager, notf domain.NotificationReader) *UseCase {
+	return &UseCase{repo: repo, drvRepo: drvRepo, txManager: txm, notfRepo: notf}
 }
 
 func (uc *UseCase) RegisterUser(ctx context.Context, u *domain.User) error {
@@ -58,6 +60,13 @@ func (uc *UseCase) RegisterUser(ctx context.Context, u *domain.User) error {
 				return fmt.Errorf("could not register driver: %w", err)
 			}
 		}
+
+		// async notification after commit
+		go func() {
+			msg := fmt.Sprintf("✅ New user '%s' has been registered with role '%s'.", u.FullName, u.Role)
+			_ = uc.notify(ctx, u.ID, msg)
+		}()
+
 		return nil
 	})
 }
@@ -65,9 +74,20 @@ func (uc *UseCase) RegisterUser(ctx context.Context, u *domain.User) error {
 // PATCH method for users to update details
 func (uc *UseCase) UpdateUserProfile(ctx context.Context, id uuid.UUID, req *domain.UpdateDriverUserProfileRequest) error {
 	return uc.txManager.Do(ctx, func(txCtx context.Context) error {
+		// fetch user for notification
+		user, err := uc.repo.GetByID(txCtx, id)
+		if err != nil {
+			return fmt.Errorf("could not fetch user: %w", err)
+		}
+
 		if err := uc.repo.UpdateProfile(txCtx, id, req.Phone); err != nil {
 			return fmt.Errorf("update user profile failed: %w", err)
 		}
+
+		go func() {
+			msg := "ℹ️ Your profile was updated successfully."
+			_ = uc.notify(ctx, user.ID, msg)
+		}()
 
 		return nil
 	})
@@ -76,9 +96,19 @@ func (uc *UseCase) UpdateUserProfile(ctx context.Context, id uuid.UUID, req *dom
 // PATCH method for user details
 func (uc *UseCase) UpdateUser(ctx context.Context, userID uuid.UUID, req *domain.UpdateUserRequest) error {
 	return uc.txManager.Do(ctx, func(txCtx context.Context) error {
+		user, err := uc.repo.GetByID(txCtx, userID)
+		if err != nil {
+			return fmt.Errorf("could not fetch user: %w", err)
+		}
+
 		if err := uc.repo.UpdateColum(txCtx, userID, req.Column, req.Value); err != nil {
 			return fmt.Errorf("update user failed: %w", err)
 		}
+
+		go func() {
+			msg := fmt.Sprintf("ℹ️ Your account column '%s' was updated.", req.Column)
+			_ = uc.notify(ctx, user.ID, msg)
+		}()
 
 		return nil
 	})
@@ -98,9 +128,19 @@ func (uc *UseCase) ListUsers(ctx context.Context) ([]*domain.User, error) {
 
 func (uc *UseCase) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	return uc.txManager.Do(ctx, func(txCtx context.Context) error {
+		user, err := uc.repo.GetByID(txCtx, id)
+		if err != nil {
+			return fmt.Errorf("could not fetch user: %w", err)
+		}
+
 		if err := uc.repo.Delete(txCtx, id); err != nil {
 			return fmt.Errorf("delete user failed: %w", err)
 		}
+
+		go func() {
+			msg := fmt.Sprintf("🗑️ User '%s' has been deleted.", user.FullName)
+			_ = uc.notify(ctx, user.ID, msg)
+		}()
 
 		return nil
 	})
@@ -108,4 +148,14 @@ func (uc *UseCase) DeleteUser(ctx context.Context, id uuid.UUID) error {
 
 func (uc *UseCase) GetAllCustomers(ctx context.Context) ([]domain.AllCustomers, error) {
 	return uc.repo.GetAllCustomers(ctx)
+}
+
+func (uc *UseCase) notify(ctx context.Context, userID uuid.UUID, message string) error {
+	n := &notification.Notification{
+		UserID:  userID,
+		Message: message,
+		Type:    notification.System,
+		Status:  notification.Pending,
+	}
+	return uc.notfRepo.Create(ctx, n)
 }

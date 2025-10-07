@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"logistics-backend/internal/domain/driver"
+	"logistics-backend/internal/domain/notification"
 	"logistics-backend/internal/domain/order"
 	"logistics-backend/internal/usecase/common"
 
@@ -17,16 +18,15 @@ type UseCase struct {
 	usrRepo   order.CustomerReader
 	drvRepo   order.DriverReader
 	txManager common.TxManager
+	notfRepo  order.NotificationReader
 }
 
-func NewUseCase(repo order.Repository, invRepo order.InventoryReader, usrRepo order.CustomerReader, txm common.TxManager) *UseCase {
-	return &UseCase{repo: repo, invRepo: invRepo, usrRepo: usrRepo, txManager: txm}
+func NewUseCase(repo order.Repository, invRepo order.InventoryReader, usrRepo order.CustomerReader, txm common.TxManager, notf order.NotificationReader) *UseCase {
+	return &UseCase{repo: repo, invRepo: invRepo, usrRepo: usrRepo, txManager: txm, notfRepo: notf}
 }
 
 func (uc *UseCase) CreateOrder(ctx context.Context, o *order.Order) (err error) {
-
 	return uc.txManager.Do(ctx, func(txCtx context.Context) error {
-
 		// 1. check order quantity
 		if o.Quantity <= 0 {
 			return order.ErrorInvalidQuantity
@@ -55,11 +55,20 @@ func (uc *UseCase) CreateOrder(ctx context.Context, o *order.Order) (err error) 
 			return fmt.Errorf("could not create order: %w", err)
 		}
 
-		return nil
+		// 6. Fire notifications (async, after commit)
+		go func() {
+			// a. Notify customer
+			msgCustomer := fmt.Sprintf("Your order %s has been created successfully.", o.ID)
+			_ = uc.notify(ctx, o.CustomerID, msgCustomer)
 
-		// TODO: goroutine
-		// fire notification for order created
-		// fire notification for restocking reminder
+			// b. Notify admin if stock low
+			if newStock <= 5 { // example threshold
+				msgAdmin := fmt.Sprintf("⚠️ Inventory '%s' stock is low: only %d left.", inv.Name, newStock)
+				_ = uc.notify(ctx, inv.AdminID, msgAdmin)
+			}
+		}()
+
+		return nil
 	})
 }
 
@@ -148,4 +157,14 @@ func (uc *UseCase) AssignOrderToDriver(ctx context.Context, orderID, driverID uu
 
 	// 6. Return assigned driver for confirmation / logging
 	return nearestDriver, nil
+}
+
+func (uc *UseCase) notify(ctx context.Context, userID uuid.UUID, message string) error {
+	n := &notification.Notification{
+		UserID:  userID,
+		Message: message,
+		Type:    notification.System,
+		Status:  notification.Pending,
+	}
+	return uc.notfRepo.Create(ctx, n)
 }

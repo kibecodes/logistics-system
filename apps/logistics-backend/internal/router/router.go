@@ -86,6 +86,7 @@ func NewRouter(
 				r.Post("/create", o.CreateOrder)
 				r.Get("/all_orders", o.ListOrders)
 				r.Get("/form-data", o.GetOrderFormData)
+				r.Post("/assign", o.AutoAssignOrders)
 				r.Get("/by-id/{id}", o.GetOrderByID)
 				r.Get("/by-customer/{customer_id}", o.GetOrderByCustomer)
 				r.Put("/{id}/update", o.UpdateOrder)
@@ -140,8 +141,9 @@ func NewRouter(
 			// Notifications
 			r.Route("/notifications", func(r chi.Router) {
 				r.Post("/create", n.CreateNotification)
-				r.Get("/all_notifications", n.ListNotification)
-				r.Get("/{id}", n.GetNotificationByID)
+				r.Get("/all_pending_notifications", n.ListNotifications)
+				r.Get("/all_my_notifications/{id}", n.ListUserNotifications)
+				r.Put("/{id}/status", n.UpdateNotificationStatus)
 			})
 		})
 	})

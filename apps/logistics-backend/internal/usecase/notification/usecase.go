@@ -28,20 +28,37 @@ func (uc *UseCase) CreateNotification(ctx context.Context, n *domain.Notificatio
 	})
 }
 
-func (uc *UseCase) GetNotification(ctx context.Context, id uuid.UUID) (*domain.Notification, error) {
-	return uc.repo.GetByID(ctx, id)
-}
-
-func (uc *UseCase) ListNotification(ctx context.Context) ([]*domain.Notification, error) {
-	return uc.repo.List(ctx)
-}
-
-func (uc *UseCase) DeleteNotification(ctx context.Context, id uuid.UUID) error {
+func (uc *UseCase) UpdateNotificationStatus(ctx context.Context, id uuid.UUID, status domain.NotificationStatus) error {
 	return uc.txManager.Do(ctx, func(txCtx context.Context) error {
-		if err := uc.repo.Delete(txCtx, id); err != nil {
-			return fmt.Errorf("delete notification failed: %w", err)
+		if err := uc.repo.UpdateStatus(txCtx, id, status); err != nil {
+			return fmt.Errorf("update notification failed: %w", err)
 		}
 
 		return nil
 	})
 }
+
+func (uc *UseCase) ListPendingNotifications(ctx context.Context) ([]*domain.Notification, error) {
+	return uc.repo.ListPending(ctx)
+}
+
+func (uc *UseCase) ListNotificationsByCustomer(ctx context.Context, userID uuid.UUID) ([]*domain.Notification, error) {
+	return uc.repo.ListByUser(ctx, userID)
+}
+
+func (uc *UseCase) SendNotification(ctx context.Context, n *domain.Notification, sender domain.Sender) error {
+	if err := uc.repo.Create(ctx, n); err != nil {
+		return err
+	}
+
+	if err := sender.Send(ctx, n); err != nil {
+		_ = uc.repo.UpdateStatus(ctx, n.ID, domain.Failed)
+		return err
+	}
+
+	return uc.repo.UpdateStatus(ctx, n.ID, domain.Sent)
+}
+
+// TODO: Implement actual notification sending via external services (e.g., Twilio, SendGrid).
+// The system should select the appropriate sender based on Notification.Type (email, sms, push)
+// and update the notification status accordingly.

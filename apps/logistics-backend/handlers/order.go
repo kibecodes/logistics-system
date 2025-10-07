@@ -246,3 +246,26 @@ func (h *OrderHandler) GetOrderFormData(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(data)
 }
+
+// @Summary Run auto-assignment for pending orders
+// @Security JWT
+// @Description Assign nearest available drivers to pending orders
+// @Tags orders
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Router /orders/assign [post]
+func (h *OrderHandler) AutoAssignOrders(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	assignments, err := h.UC.OrderAssignment(ctx, 5000) // 5km radius
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "Assignment failed", err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]any{
+		"message":     "Auto-assignment complete",
+		"assignments": assignments,
+		"count":       len(assignments),
+	})
+}

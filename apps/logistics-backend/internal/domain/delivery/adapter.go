@@ -3,6 +3,7 @@ package delivery
 import (
 	"context"
 	"logistics-backend/internal/domain/driver"
+	"logistics-backend/internal/domain/notification"
 	"logistics-backend/internal/domain/order"
 
 	"github.com/google/uuid"
@@ -18,4 +19,8 @@ type OrderReader interface {
 type DriverReader interface {
 	GetDriverByID(ctx context.Context, id uuid.UUID) (*driver.Driver, error)
 	UpdateDriverAvailability(ctx context.Context, driverID uuid.UUID, column string, value bool) error
+}
+
+type NotificationReader interface {
+	Create(ctx context.Context, n *notification.Notification) error
 }

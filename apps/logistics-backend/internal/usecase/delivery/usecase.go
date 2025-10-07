@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"logistics-backend/internal/domain/delivery"
+	"logistics-backend/internal/domain/notification"
 	"logistics-backend/internal/usecase/common"
 
 	"github.com/google/uuid"
@@ -14,10 +15,11 @@ type UseCase struct {
 	ordRepo   delivery.OrderReader
 	drvRepo   delivery.DriverReader
 	txManager common.TxManager
+	notfRepo  delivery.NotificationReader
 }
 
-func NewUseCase(repo delivery.Repository, ordRepo delivery.OrderReader, drvRepo delivery.DriverReader, txm common.TxManager) *UseCase {
-	return &UseCase{repo: repo, ordRepo: ordRepo, drvRepo: drvRepo, txManager: txm}
+func NewUseCase(repo delivery.Repository, ordRepo delivery.OrderReader, drvRepo delivery.DriverReader, txm common.TxManager, notf delivery.NotificationReader) *UseCase {
+	return &UseCase{repo: repo, ordRepo: ordRepo, drvRepo: drvRepo, txManager: txm, notfRepo: notf}
 }
 
 func (uc *UseCase) GetDeliveryByID(ctx context.Context, deliveryId uuid.UUID) (*delivery.Delivery, error) {
@@ -26,9 +28,19 @@ func (uc *UseCase) GetDeliveryByID(ctx context.Context, deliveryId uuid.UUID) (*
 
 func (uc *UseCase) UpdateDelivery(ctx context.Context, deliveryID uuid.UUID, column string, value any) error {
 	return uc.txManager.Do(ctx, func(txCtx context.Context) error {
+		d, err := uc.repo.GetByID(txCtx, deliveryID)
+		if err != nil {
+			return fmt.Errorf("could not fetch delivery: %w", err)
+		}
+
 		if err := uc.repo.Update(txCtx, deliveryID, column, value); err != nil {
 			return fmt.Errorf("update delivery failed: %w", err)
 		}
+
+		go func() {
+			msg := fmt.Sprintf("ℹ️ Delivery for order %s updated: '%s' changed.", d.OrderID, column)
+			_ = uc.notify(ctx, d.DriverID, msg)
+		}()
 
 		return nil
 	})
@@ -60,6 +72,14 @@ func (uc *UseCase) AcceptDelivery(ctx context.Context, d *delivery.Delivery) err
 		//     return err
 		// }
 
+		go func() {
+			msgCustomer := fmt.Sprintf("🚚 Your order %s is now in transit with driver %s.", order.ID, driver.FullName)
+			_ = uc.notify(ctx, order.CustomerID, msgCustomer)
+
+			msgDriver := fmt.Sprintf("✅ You have accepted delivery for order %s.", order.ID)
+			_ = uc.notify(ctx, driver.ID, msgDriver)
+		}()
+
 		return uc.repo.Create(txCtx, d)
 	})
 
@@ -86,4 +106,14 @@ func (uc *UseCase) DeleteDelivery(ctx context.Context, id uuid.UUID) error {
 
 		return nil
 	})
+}
+
+func (uc *UseCase) notify(ctx context.Context, userID uuid.UUID, message string) error {
+	n := &notification.Notification{
+		UserID:  userID,
+		Message: message,
+		Type:    notification.System,
+		Status:  notification.Pending,
+	}
+	return uc.notfRepo.Create(ctx, n)
 }

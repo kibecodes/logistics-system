@@ -1,14 +1,9 @@
-package user
+package driver
 
 import (
 	"context"
-	"logistics-backend/internal/domain/driver"
 	"logistics-backend/internal/domain/notification"
 )
-
-type DriverReader interface {
-	RegisterDriver(ctx context.Context, d *driver.Driver) error
-}
 
 type NotificationReader interface {
 	Create(ctx context.Context, n *notification.Notification) error

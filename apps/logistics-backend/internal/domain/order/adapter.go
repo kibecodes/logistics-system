@@ -4,6 +4,7 @@ import (
 	"context"
 	"logistics-backend/internal/domain/driver"
 	"logistics-backend/internal/domain/inventory"
+	"logistics-backend/internal/domain/notification"
 
 	"github.com/cridenour/go-postgis"
 	"github.com/google/uuid"
@@ -25,4 +26,8 @@ type CustomerReader interface {
 
 type DriverReader interface {
 	GetNearestDriver(ctx context.Context, pickup postgis.PointS, maxDistance float64) (*driver.Driver, error)
+}
+
+type NotificationReader interface {
+	Create(ctx context.Context, n *notification.Notification) error
 }

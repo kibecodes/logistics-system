@@ -8,11 +8,13 @@ import (
 	deliveryadapter "logistics-backend/internal/adapters/delivery"
 	driveradapter "logistics-backend/internal/adapters/driver"
 	inventoryadapter "logistics-backend/internal/adapters/inventory"
+	notificationadapter "logistics-backend/internal/adapters/notification"
 	orderadapter "logistics-backend/internal/adapters/order"
 	useradapter "logistics-backend/internal/adapters/user"
 	"sort"
 
 	"logistics-backend/internal/domain/driver"
+	"logistics-backend/internal/domain/notification"
 	order "logistics-backend/internal/domain/order"
 
 	"github.com/google/uuid"
@@ -24,11 +26,12 @@ type Assignment struct {
 }
 
 type OrderService struct {
-	Users       *useradapter.UseCaseAdapter
-	Orders      *orderadapter.UseCaseAdapter
-	Drivers     *driveradapter.UseCaseAdapter
-	Deliveries  *deliveryadapter.UseCaseAdapter
-	Inventories *inventoryadapter.UseCaseAdapter
+	Users         *useradapter.UseCaseAdapter
+	Orders        *orderadapter.UseCaseAdapter
+	Drivers       *driveradapter.UseCaseAdapter
+	Deliveries    *deliveryadapter.UseCaseAdapter
+	Inventories   *inventoryadapter.UseCaseAdapter
+	Notifications *notificationadapter.UseCaseAdapter
 }
 
 func NewOrderService(
@@ -37,13 +40,15 @@ func NewOrderService(
 	driverUC *driveradapter.UseCaseAdapter,
 	deliveryUC *deliveryadapter.UseCaseAdapter,
 	inventoryUC *inventoryadapter.UseCaseAdapter,
+	notificationUC *notificationadapter.UseCaseAdapter,
 ) *OrderService {
 	return &OrderService{
-		Users:       userUC,
-		Orders:      orderUC,
-		Drivers:     driverUC,
-		Deliveries:  deliveryUC,
-		Inventories: inventoryUC,
+		Users:         userUC,
+		Orders:        orderUC,
+		Drivers:       driverUC,
+		Deliveries:    deliveryUC,
+		Inventories:   inventoryUC,
+		Notifications: notificationUC,
 	}
 }
 
@@ -168,6 +173,26 @@ func (s *OrderService) OrderAssignment(ctx context.Context, maxDistance float64)
 			if err != nil {
 				continue
 			}
+
+			// Create a notification for both driver and customer
+			msgCustomer := fmt.Sprintf("Your order %s has been assigned to driver %s", o.ID.String(), designatedDriver.FullName)
+			msgDriver := fmt.Sprintf("You have been assigned a new delivery: order %s", o.ID.String())
+
+			// Customer notification
+			_ = s.Notifications.UseCase.CreateNotification(ctx, &notification.Notification{
+				UserID:  o.CustomerID,
+				Message: msgCustomer,
+				Type:    notification.System, // or SMS later
+				Status:  notification.Pending,
+			})
+
+			// Driver notification
+			_ = s.Notifications.UseCase.CreateNotification(ctx, &notification.Notification{
+				UserID:  designatedDriver.ID,
+				Message: msgDriver,
+				Type:    notification.System,
+				Status:  notification.Pending,
+			})
 
 			// ✅ TODO (Future optimization):
 			// Consider grouping or batching assignments by proximity and destination direction.
