@@ -118,10 +118,11 @@ func (h *NotificationHandler) ListNotifications(w http.ResponseWriter, r *http.R
 // ListUserNotifications godoc
 // @Summary List notifications by user
 // @Security JWT
-// @Description Get all notifications belonging to a user
+// @Description Get all notifications belonging to a user (optionally filtered by status)
 // @Tags notifications
 // @Produce json
 // @Param id path string true "User ID"
+// @Param status query string false "Notification status (pending, sent, failed, read)"
 // @Success 200 {array} notification.Notification
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
@@ -134,7 +135,15 @@ func (h *NotificationHandler) ListUserNotifications(w http.ResponseWriter, r *ht
 		return
 	}
 
-	n, err := h.UC.Notifications.UseCase.ListNotificationsByCustomer(r.Context(), userID)
+	var n []*notification.Notification
+	statusStr := r.URL.Query().Get("status")
+	if statusStr != "" {
+		status := notification.NotificationStatus(statusStr)
+		n, err = h.UC.Notifications.UseCase.ListNotificationsByCustomer(r.Context(), userID, status)
+	} else {
+		n, err = h.UC.Notifications.UseCase.ListNotificationsByCustomer(r.Context(), userID, "pending")
+	}
+
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "Could not fetch notifications", err)
 		return
@@ -142,4 +151,65 @@ func (h *NotificationHandler) ListUserNotifications(w http.ResponseWriter, r *ht
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(n)
+}
+
+// MarkAsRead godoc
+// @Summary Mark a single notification as read
+// @Security JWT
+// @Description Update notification status to "read" by ID
+// @Tags notifications
+// @Accept json
+// @Produce json
+// @Param id path string true "Notification ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} handlers.ErrorResponse "Invalid ID"
+// @Failure 500 {object} handlers.ErrorResponse "Failed to update notification"
+// @Router /notifications/{id}/read [patch]
+func (h *NotificationHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid id", nil)
+		return
+	}
+
+	if err := h.UC.Notifications.UseCase.MarkAsRead(r.Context(), id); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "could not mark notification as read", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Notification marked as read",
+	})
+}
+
+// MarkAllAsRead godoc
+// @Summary Mark all user notifications as read
+// @Security JWT
+// @Description Mark all unread notifications for a given user ID as "read"
+// @Tags notifications
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} handlers.ErrorResponse "Invalid user ID"
+// @Failure 500 {object} handlers.ErrorResponse "Failed to mark notifications as read"
+// @Router /notifications/mark_all_as_read/{id} [patch]
+func (h *NotificationHandler) MarkAllAsRead(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	userID, err := uuid.Parse(idStr)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Invalid user ID", nil)
+		return
+	}
+
+	if err := h.UC.Notifications.UseCase.MarkAllAsRead(r.Context(), userID); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "Failed to mark notifications as read", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "All notifications marked as read",
+	})
 }

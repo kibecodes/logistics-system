@@ -10,7 +10,8 @@ type Repository interface {
 	Create(ctx context.Context, notification *Notification) error
 	UpdateStatus(ctx context.Context, id uuid.UUID, status NotificationStatus) error
 	ListPending(ctx context.Context) ([]*Notification, error)
-	ListByUser(ctx context.Context, userID uuid.UUID) ([]*Notification, error)
+	ListByUserAndStatus(ctx context.Context, userID uuid.UUID, status NotificationStatus) ([]*Notification, error)
+	UpdateAllAsRead(ctx context.Context, userID uuid.UUID) error
 }
 
 // Sender defines a generic interface for sending notifications.

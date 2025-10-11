@@ -76,6 +76,26 @@ func (r *NotificationRepository) UpdateStatus(ctx context.Context, id uuid.UUID,
 	return nil
 }
 
+func (r *NotificationRepository) UpdateAllAsRead(ctx context.Context, userID uuid.UUID) error {
+	query := `
+		UPDATE notifications
+		SET status = :status, updated_at = NOW()
+		WHERE user_id = :user_id AND status != :status
+	`
+
+	args := map[string]interface{}{
+		"status":  notification.Read,
+		"user_id": userID,
+	}
+
+	_, err := sqlx.NamedExecContext(ctx, r.execFromCtx(ctx), query, args)
+	if err != nil {
+		return fmt.Errorf("mark all notifications as read: %w", err)
+	}
+
+	return nil
+}
+
 func (r *NotificationRepository) ListPending(ctx context.Context) ([]*notification.Notification, error) {
 	query := `
 		SELECT id, user_id, message, type, status, sent_at, created_at, updated_at
@@ -91,15 +111,15 @@ func (r *NotificationRepository) ListPending(ctx context.Context) ([]*notificati
 	return notifications, nil
 }
 
-func (r *NotificationRepository) ListByUser(ctx context.Context, userID uuid.UUID) ([]*notification.Notification, error) {
+func (r *NotificationRepository) ListByUserAndStatus(ctx context.Context, userID uuid.UUID, status notification.NotificationStatus) ([]*notification.Notification, error) {
 	query := `
 		SELECT id, user_id, message, type, status, sent_at, created_at, updated_at
 		FROM notifications
-		WHERE user_id = $1
+		WHERE user_id = $1 AND status = $2
 		ORDER BY created_at DESC
 	`
 	var notifications []*notification.Notification
-	err := sqlx.SelectContext(ctx, r.execFromCtx(ctx), &notifications, query, userID)
+	err := sqlx.SelectContext(ctx, r.execFromCtx(ctx), &notifications, query, userID, status)
 	if err != nil {
 		return nil, fmt.Errorf("list notifications by user: %w", err)
 	}

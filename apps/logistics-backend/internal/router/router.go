@@ -144,6 +144,8 @@ func NewRouter(
 				r.Get("/all_pending_notifications", n.ListNotifications)
 				r.Get("/all_my_notifications/{id}", n.ListUserNotifications)
 				r.Put("/{id}/status", n.UpdateNotificationStatus)
+				r.Patch("/{id}/read", n.MarkAsRead)
+				r.Patch("/mark_all_as_read/{id}", n.MarkAllAsRead)
 			})
 		})
 	})

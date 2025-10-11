@@ -18,6 +18,7 @@ const (
 	Pending NotificationStatus = "pending"
 	Sent    NotificationStatus = "sent"
 	Failed  NotificationStatus = "failed"
+	Read    NotificationStatus = "read"
 )
 
 type Notification struct {

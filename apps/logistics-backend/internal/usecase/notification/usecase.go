@@ -38,12 +38,20 @@ func (uc *UseCase) UpdateNotificationStatus(ctx context.Context, id uuid.UUID, s
 	})
 }
 
+func (uc *UseCase) MarkAsRead(ctx context.Context, id uuid.UUID) error {
+	return uc.repo.UpdateStatus(ctx, id, domain.Read)
+}
+
+func (uc *UseCase) MarkAllAsRead(ctx context.Context, userID uuid.UUID) error {
+	return uc.repo.UpdateAllAsRead(ctx, userID)
+}
+
 func (uc *UseCase) ListPendingNotifications(ctx context.Context) ([]*domain.Notification, error) {
 	return uc.repo.ListPending(ctx)
 }
 
-func (uc *UseCase) ListNotificationsByCustomer(ctx context.Context, userID uuid.UUID) ([]*domain.Notification, error) {
-	return uc.repo.ListByUser(ctx, userID)
+func (uc *UseCase) ListNotificationsByCustomer(ctx context.Context, userID uuid.UUID, status domain.NotificationStatus) ([]*domain.Notification, error) {
+	return uc.repo.ListByUserAndStatus(ctx, userID, domain.Sent)
 }
 
 func (uc *UseCase) SendNotification(ctx context.Context, n *domain.Notification, sender domain.Sender) error {
