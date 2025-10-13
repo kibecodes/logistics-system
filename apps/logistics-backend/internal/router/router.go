@@ -23,6 +23,7 @@ func NewRouter(
 	i *handlers.InventoryHandler,
 	publicApiBaseUrl string,
 	c *handlers.InviteHandler,
+	s *handlers.StoreHandler,
 ) http.Handler {
 	r := chi.NewRouter()
 
@@ -147,6 +148,17 @@ func NewRouter(
 				r.Patch("/{id}/read", n.MarkAsRead)
 				r.Patch("/mark_all_as_read/{id}", n.MarkAllAsRead)
 			})
+
+			// Stores
+			r.Route("/stores", func(r chi.Router) {
+				r.Post("/create", s.CreateStore)
+				r.Get("/by-slug", s.GetStoreBySlug)
+				r.Get("/public", s.GetPublicStores)
+				r.Get("/by-id/{id}", s.GetStoreByID)
+				r.Put("/{id}/update", s.UpdateStore)
+				r.Delete("/{id}", s.DeleteStore)
+			})
+
 		})
 	})
 

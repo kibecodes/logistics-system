@@ -11,11 +11,11 @@ type CreateOrderRequest struct {
 	InventoryID uuid.UUID `json:"inventory_id" binding:"required"`
 	CustomerID  uuid.UUID `json:"customer_id" binding:"required"`
 
-	PickupAddress string         `db:"pickup_address" json:"pickup_address"`
-	PickupPoint   postgis.PointS `db:"pickup_point" json:"pickup_point"`
+	PickupAddress string         `json:"pickup_address" binding:"required"`
+	PickupPoint   postgis.PointS `json:"pickup_point" binding:"required"`
 
-	DeliveryAddress string         `db:"delivery_address" json:"delivery_address"`
-	DeliveryPoint   postgis.PointS `db:"delivery_point" json:"delivery_point"`
+	DeliveryAddress string         `json:"delivery_address" binding:"required"`
+	DeliveryPoint   postgis.PointS `json:"delivery_point" binding:"required"`
 }
 
 type UpdateOrderRequest struct {

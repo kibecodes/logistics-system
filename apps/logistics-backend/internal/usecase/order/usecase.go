@@ -19,10 +19,11 @@ type UseCase struct {
 	drvRepo   order.DriverReader
 	txManager common.TxManager
 	notfRepo  order.NotificationReader
+	storeRepo order.StoreReader
 }
 
-func NewUseCase(repo order.Repository, invRepo order.InventoryReader, usrRepo order.CustomerReader, txm common.TxManager, notf order.NotificationReader) *UseCase {
-	return &UseCase{repo: repo, invRepo: invRepo, usrRepo: usrRepo, txManager: txm, notfRepo: notf}
+func NewUseCase(repo order.Repository, invRepo order.InventoryReader, usrRepo order.CustomerReader, txm common.TxManager, notf order.NotificationReader, str order.StoreReader) *UseCase {
+	return &UseCase{repo: repo, invRepo: invRepo, usrRepo: usrRepo, txManager: txm, notfRepo: notf, storeRepo: str}
 }
 
 func (uc *UseCase) CreateOrder(ctx context.Context, o *order.Order) (err error) {
@@ -36,6 +37,12 @@ func (uc *UseCase) CreateOrder(ctx context.Context, o *order.Order) (err error) 
 		inv, err := uc.invRepo.GetInventoryByID(txCtx, o.InventoryID)
 		if err != nil {
 			return fmt.Errorf("could not fetch inventory: %w", err)
+		}
+
+		// get store
+		store, err := uc.storeRepo.GetByID(txCtx, inv.ID)
+		if err != nil {
+			return fmt.Errorf("could not fetch store: %w", err)
 		}
 
 		// 3. check available stock
@@ -63,8 +70,8 @@ func (uc *UseCase) CreateOrder(ctx context.Context, o *order.Order) (err error) 
 
 			// b. Notify admin if stock low
 			if newStock <= 5 { // example threshold
-				msgAdmin := fmt.Sprintf("⚠️ Inventory '%s' stock is low: only %d left.", inv.Name, newStock)
-				_ = uc.notify(ctx, inv.AdminID, msgAdmin)
+				msgAdmin := fmt.Sprintf("⚠️ Inventory '%s' stock is low: only %d left.", inv.Category, newStock)
+				_ = uc.notify(ctx, store.OwnerID, msgAdmin)
 			}
 		}()
 

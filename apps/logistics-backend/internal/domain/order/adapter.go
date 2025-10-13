@@ -5,6 +5,7 @@ import (
 	"logistics-backend/internal/domain/driver"
 	"logistics-backend/internal/domain/inventory"
 	"logistics-backend/internal/domain/notification"
+	"logistics-backend/internal/domain/store"
 
 	"github.com/cridenour/go-postgis"
 	"github.com/google/uuid"
@@ -30,4 +31,8 @@ type DriverReader interface {
 
 type NotificationReader interface {
 	Create(ctx context.Context, n *notification.Notification) error
+}
+
+type StoreReader interface {
+	GetByID(ctx context.Context, id uuid.UUID) (*store.Store, error)
 }

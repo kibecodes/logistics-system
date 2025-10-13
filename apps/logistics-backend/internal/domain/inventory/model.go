@@ -10,9 +10,8 @@ import (
 
 type Inventory struct {
 	ID            uuid.UUID `db:"id" json:"id"`
-	AdminID       uuid.UUID `db:"admin_id" json:"admin_id"` // Foreign key
-	Name          string    `db:"name" json:"name"`         // e.g. “Fresh Milk”
-	Category      string    `db:"category" json:"category"` // e.g. “Dairy”
+	StoreID       uuid.UUID `db:"store_id" json:"store_id"` // FK to stores.id
+	Category      string    `db:"category" json:"category"` // e.g. “Dairy” - "name" field equivalent
 	Stock         int       `db:"stock" json:"stock"`
 	PriceAmount   int64     `db:"price_amount" json:"price_amount"`
 	PriceCurrency string    `db:"price_currency" json:"price_currency"`
@@ -20,8 +19,6 @@ type Inventory struct {
 	Unit          string    `db:"unit" json:"unit"`           // "per litre", "per bucket"
 	Packaging     string    `db:"packaging" json:"packaging"` // “Bucket/Single”
 	Description   string    `db:"description" json:"description"`
-	Location      string    `db:"location" json:"location"` // optional
-	Slug          string    `db:"slug" json:"slug"`         // product slug
 	CreatedAt     time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt     time.Time `db:"updated_at" json:"updated_at"`
 }

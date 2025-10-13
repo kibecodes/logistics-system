@@ -22,6 +22,7 @@ import (
 	notificationUsecase "logistics-backend/internal/usecase/notification"
 	orderUsecase "logistics-backend/internal/usecase/order"
 	paymentUsecase "logistics-backend/internal/usecase/payment"
+	storeUsecase "logistics-backend/internal/usecase/store"
 	userUsecase "logistics-backend/internal/usecase/user"
 
 	"logistics-backend/internal/application"
@@ -67,16 +68,18 @@ func main() {
 	notificationRepo := postgres.NewNotificationRepository(db)
 	inventoryRepo := postgres.NewInventoryRespository(db)
 	inviteRepo := postgres.NewInviteRepository(db)
+	storeRepo := postgres.NewStoreRepository(db)
 
 	// Set up usecase
 	// Individual
 	inviteUC := inviteUsecase.NewUseCase(inviteRepo, txm)
 	driverUC := driverUsecase.NewUseCase(driverRepo, txm, notificationRepo)
 	userUC := userUsecase.NewUseCase(userRepo, driverUC, txm, notificationRepo)
-	inventoryUC := inventoryUsecase.NewUseCase(inventoryRepo, txm, notificationRepo)
-	orderUC := orderUsecase.NewUseCase(orderRepo, &inventoryadapter.UseCaseAdapter{UseCase: inventoryUC}, &useradapter.UseCaseAdapter{UseCase: userUC}, txm, notificationRepo)
+	inventoryUC := inventoryUsecase.NewUseCase(inventoryRepo, txm, notificationRepo, storeRepo)
+	orderUC := orderUsecase.NewUseCase(orderRepo, &inventoryadapter.UseCaseAdapter{UseCase: inventoryUC}, &useradapter.UseCaseAdapter{UseCase: userUC}, txm, notificationRepo, storeRepo)
 	deliveryUC := deliveryUsecase.NewUseCase(deliveryRepo, &orderadapter.UseCaseAdapter{UseCase: orderUC}, &driveradapter.UseCaseAdapter{UseCase: driverUC}, txm, notificationRepo)
 	notificationUC := notificationUsecase.NewUseCase(notificationRepo, txm)
+	storeUC := storeUsecase.NewUseCase(storeRepo, txm)
 
 	// Combined cross-domain service
 	orderService := application.NewOrderService(
@@ -102,6 +105,7 @@ func main() {
 	notificationHandler := handlers.NewNotificationHandler(orderService)
 	inviteHandler := handlers.NewInviteHandler(inviteUC)
 	inventoryHandler := handlers.NewInventoryHandler(orderService)
+	storeHandler := handlers.NewStoreHandler(storeUC)
 
 	// Start server
 	r := router.NewRouter(
@@ -115,6 +119,7 @@ func main() {
 		inventoryHandler,
 		publicApiBaseUrl,
 		inviteHandler,
+		storeHandler,
 	)
 
 	log.Println("Server starting at :8080")
