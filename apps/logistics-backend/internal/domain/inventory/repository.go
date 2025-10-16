@@ -14,10 +14,9 @@ type Repository interface {
 	GetAllInventories(ctx context.Context) ([]AllInventory, error)     // GET all inv ID, Name & AdminID without pagination.
 	Delete(ctx context.Context, id uuid.UUID) error                    // DELETE method to remove inventory by id.
 
-	GetByCategory(ctx context.Context, category string) ([]Inventory, error)                 // GET method for fetching inventories(slice) by category.
-	ListCategories(ctx context.Context) ([]string, error)                                    // GET method for fetching all categories in inventories table.
-	UpdateColumn(ctx context.Context, inventoryID uuid.UUID, column string, value any) error // PUT method for updating table column values.
+	GetByCategory(ctx context.Context, category string) ([]*Inventory, error)       // GET method for fetching inventories(slice) by category.
+	ListCategories(ctx context.Context) ([]string, error)                           // GET method for fetching all categories in inventories table.
+	UpdateColumn(ctx context.Context, id uuid.UUID, column string, value any) error // PUT method for updating table column values.
 
-	GetBySlugs(ctx context.Context, adminSlugs, productSlug string) (*Inventory, error) // GET method for fetching specified inventory products by admin's slug.
-	GetStoreView(ctx context.Context, adminSlug string) (*StorePublicView, error)       // GET method for fetching admin's store view.
+	GetByStoreID(ctx context.Context, storeID uuid.UUID) ([]*Inventory, error)
 }

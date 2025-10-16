@@ -28,7 +28,7 @@ func (uc *UseCase) CreateInventory(ctx context.Context, i *domain.Inventory) err
 		}
 
 		// Fetch store to get AdminID/ OwnerID
-		store, err := uc.storeRepo.GetByID(txCtx, i.ID)
+		store, err := uc.storeRepo.GetByID(txCtx, i.StoreID)
 		if err != nil {
 			return fmt.Errorf("could not fetch store: %w", err)
 		}
@@ -59,16 +59,16 @@ func (uc *UseCase) GetInventoryByName(ctx context.Context, name string) (*domain
 
 func (uc *UseCase) UpdateInventory(ctx context.Context, inventoryId uuid.UUID, column string, value any) error {
 	return uc.txManager.Do(ctx, func(txCtx context.Context) error {
-		// 1. Fetch store to get AdminID/ OwnerID
-		store, err := uc.storeRepo.GetByID(txCtx, inventoryId)
-		if err != nil {
-			return fmt.Errorf("could not fetch store: %w", err)
-		}
-
-		// 2. Fetch inventory to get Category
+		// 1. Fetch inventory to get Category
 		inv, err := uc.repo.GetByID(txCtx, inventoryId)
 		if err != nil {
 			return fmt.Errorf("could not fetch inventory: %w", err)
+		}
+
+		// 2. Fetch store to get AdminID/ OwnerID
+		store, err := uc.storeRepo.GetByID(txCtx, inv.StoreID)
+		if err != nil {
+			return fmt.Errorf("could not fetch store: %w", err)
 		}
 
 		// 3. Update column
@@ -90,34 +90,30 @@ func (uc *UseCase) List(ctx context.Context, limit, offset int) ([]*domain.Inven
 	return uc.repo.List(ctx, limit, offset)
 }
 
-func (uc *UseCase) GetByCategory(ctx context.Context, category string) ([]domain.Inventory, error) {
+func (uc *UseCase) GetByCategory(ctx context.Context, category string) ([]*domain.Inventory, error) {
 	return uc.repo.GetByCategory(ctx, category)
+}
+
+func (uc *UseCase) GetByStore(ctx context.Context, storeID uuid.UUID) ([]*domain.Inventory, error) {
+	return uc.repo.GetByStoreID(ctx, storeID)
 }
 
 func (uc *UseCase) ListCategories(ctx context.Context) ([]string, error) {
 	return uc.repo.ListCategories(ctx)
 }
 
-func (uc *UseCase) GetBySlugs(ctx context.Context, adminSlug, productSlug string) (*domain.Inventory, error) {
-	return uc.repo.GetBySlugs(ctx, adminSlug, productSlug)
-}
-
-func (uc *UseCase) GetStorePublicView(ctx context.Context, adminSlug string) (*domain.StorePublicView, error) {
-	return uc.repo.GetStoreView(ctx, adminSlug)
-}
-
 func (uc *UseCase) DeleteByID(ctx context.Context, id uuid.UUID) error {
 	return uc.txManager.Do(ctx, func(txCtx context.Context) error {
-		// 1. Fetch store to get AdminID/ OwnerID
-		store, err := uc.storeRepo.GetByID(txCtx, id)
-		if err != nil {
-			return fmt.Errorf("could not fetch store: %w", err)
-		}
-
-		// 2. Fetch inventory to get Category
+		// 1. Fetch inventory to get Category
 		inv, err := uc.repo.GetByID(txCtx, id)
 		if err != nil {
 			return fmt.Errorf("could not fetch inventory: %w", err)
+		}
+
+		// 2. Fetch store to get AdminID/ OwnerID
+		store, err := uc.storeRepo.GetByID(txCtx, inv.StoreID)
+		if err != nil {
+			return fmt.Errorf("could not fetch store: %w", err)
 		}
 
 		// 3. Delete

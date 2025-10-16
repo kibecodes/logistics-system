@@ -124,20 +124,36 @@ func (r *InventoryRepository) UpdateColumn(ctx context.Context, inventoryID uuid
 	return nil
 }
 
-func (r *InventoryRepository) GetByCategory(ctx context.Context, category string) ([]inventory.Inventory, error) {
+func (r *InventoryRepository) GetByCategory(ctx context.Context, category string) ([]*inventory.Inventory, error) {
 	query := `
-		SELECT id, admin_id, name, category, stock, price_amount, price_currency, images, unit, packaging, description, location, slug, created_at, updated_at
+		SELECT id, admin_id, name, category, stock, price_amount, price_currency, images, unit, 
+			packaging, description, location, slug, created_at, updated_at
 		FROM inventories
 		WHERE category = $1
 	`
 
-	var inventories []inventory.Inventory
+	var inventories []*inventory.Inventory
 	if err := sqlx.SelectContext(ctx, r.execFromCtx(ctx), &inventories, query, category); err != nil {
 		return nil, fmt.Errorf("get inventories by category: %w", err)
 	}
 
 	return inventories, nil
 
+}
+
+func (r *InventoryRepository) GetByStoreID(ctx context.Context, storeID uuid.UUID) ([]*inventory.Inventory, error) {
+	query := `
+		SELECT id, store_id, category, stock, price_amount, price_currency, images, unit,
+		       packaging, description, created_at, updated_at
+		FROM inventories
+		WHERE store_id = $1
+		ORDER BY created_at DESC
+	`
+	var inventories []*inventory.Inventory
+	if err := sqlx.SelectContext(ctx, r.execFromCtx(ctx), &inventories, query, storeID); err != nil {
+		return nil, fmt.Errorf("get inventories by store: %w", err)
+	}
+	return inventories, nil
 }
 
 func (r *InventoryRepository) ListCategories(ctx context.Context) ([]string, error) {
@@ -164,51 +180,6 @@ func (r *InventoryRepository) List(ctx context.Context, limit, offset int) ([]*i
 	var inventories []*inventory.Inventory
 	err := sqlx.SelectContext(ctx, r.execFromCtx(ctx), &inventories, query, limit, offset)
 	return inventories, err
-}
-
-func (r *InventoryRepository) GetBySlugs(ctx context.Context, adminSlug, productSlug string) (*inventory.Inventory, error) {
-	query := `
-		SELECT i.id, i.admin_id, i.name, i.category, i.stock, i.price_amount, i.price_currency, i.images, i.unit, i.packaging, i.description, i.location, i.slug
-		FROM inventories i
-		JOIN users u ON i.admin_id = u.id
-		WHERE i.slug = $1 AND u.slug = $2
-	`
-
-	var inv inventory.Inventory
-	if err := sqlx.GetContext(ctx, r.execFromCtx(ctx), &inv, query, productSlug, adminSlug); err != nil {
-		return nil, fmt.Errorf("get inventory by slugs: %w", err)
-	}
-
-	return &inv, nil
-}
-
-func (r *InventoryRepository) GetStoreView(ctx context.Context, adminSlug string) (*inventory.StorePublicView, error) {
-
-	// Getting admin info
-	adminQuery := `
-	SELECT full_name AS admin_name, category, location
-	FROM users 
-	WHERE slug = $1 
-	AND role = 'admin'
-	`
-	var store inventory.StorePublicView
-	if err := sqlx.GetContext(ctx, r.execFromCtx(ctx), &store, adminQuery, adminSlug); err != nil {
-		return nil, fmt.Errorf("get store admin info: %w", err)
-	}
-
-	// Getting products for this admin
-	productQuery := `
-		SELECT name, price_amount, price_currency, unit, packaging, stock AS in_stock,
-			(split_part(images, ',', 1)) AS image
-		FROM inventories i
-		JOIN users u ON i.admin_id = u.id
-		WHERE u.slug = $1
-	`
-	if err := sqlx.SelectContext(ctx, r.execFromCtx(ctx), &store.Products, productQuery, adminSlug); err != nil {
-		return nil, fmt.Errorf("get store products: %w", err)
-	}
-
-	return &store, nil
 }
 
 func (r *InventoryRepository) Delete(ctx context.Context, id uuid.UUID) error {
@@ -244,47 +215,3 @@ func (r *InventoryRepository) GetAllInventories(ctx context.Context) ([]inventor
 	err := sqlx.SelectContext(ctx, r.execFromCtx(ctx), &inventories, query)
 	return inventories, err
 }
-
-// func GetColumnValues[T any](ctx context.Context, db *sqlx.DB, column string) ([]T, error) {
-// 	// Optional: whitelist
-// 	allowed := map[string]bool{
-// 		"stock":    true,
-// 		"category": true,
-// 		"location": true,
-// 	}
-
-// 	if !allowed[column] {
-// 		return nil, fmt.Errorf("invalid column: %s", column)
-// 	}
-
-// 	query := fmt.Sprintf(`SELECT %s FROM inventories`, column)
-
-// 	var values []T
-// 	err := db.SelectContext(ctx, &values, query)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return values, nil
-// }
-
-// func UpdateColumnValues[T any](ctx context.Context, db *sqlx.DB, column string, newValue T, filterColumn string, filterValue any) error {
-// 	allowed := map[string]bool{
-// 		"stock":    true,
-// 		"category": true,
-// 		"location": true,
-// 		"name":     true,
-// 	}
-
-// 	if !allowed[column] {
-// 		return fmt.Errorf("invalid column to update: %s", column)
-// 	}
-// 	if !allowed[filterColumn] {
-// 		return fmt.Errorf("invalid filter column: %s", filterColumn)
-// 	}
-
-// 	query := fmt.Sprintf(`UPDATE inventories SET %s = $1 WHERE %s = $2`, column, filterColumn)
-
-// 	_, err := db.ExecContext(ctx, query, newValue, filterValue)
-// 	return err
-// }

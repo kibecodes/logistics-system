@@ -40,7 +40,7 @@ func (uc *UseCase) CreateOrder(ctx context.Context, o *order.Order) (err error) 
 		}
 
 		// get store
-		store, err := uc.storeRepo.GetByID(txCtx, inv.ID)
+		store, err := uc.storeRepo.GetByID(txCtx, inv.StoreID)
 		if err != nil {
 			return fmt.Errorf("could not fetch store: %w", err)
 		}

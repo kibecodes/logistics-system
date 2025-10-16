@@ -194,6 +194,35 @@ func (h *InventoryHandler) GetInventoryByCategory(w http.ResponseWriter, r *http
 	json.NewEncoder(w).Encode(inventories)
 }
 
+// GetInventoryByStore godoc
+// @Summary Get inventories by Store ID
+// @Security JWT
+// @Description Fetch all inventory items belonging to a specific store
+// @Tags inventories
+// @Produce json
+// @Param id path string true "Store ID"
+// @Success 200 {array} inventory.Inventory
+// @Failure 400 {object} handlers.ErrorResponse "Invalid store ID"
+// @Failure 404 {object} handlers.ErrorResponse "No inventories found"
+// @Router /inventories/by-store/{id} [get]
+func (h *InventoryHandler) GetInventoryByStore(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	storeID, err := uuid.Parse(idStr)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Invalid store ID", nil)
+		return
+	}
+
+	inventories, err := h.UC.Inventories.UseCase.GetByStore(r.Context(), storeID)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "No inventories found", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(inventories)
+}
+
 // @Summary List all categories
 // @Security JWT
 // @Description Get all unique categories that belong to existing inventories
@@ -211,50 +240,6 @@ func (h *InventoryHandler) ListCategories(w http.ResponseWriter, r *http.Request
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(categories)
-}
-
-// @Summary View public product page
-// @Description View a specific product by admin slug and product slug
-// @Tags public
-// @Produce json
-// @Param adminSlug path string true "Admin Slug"
-// @Param productSlug path string true "Product Slug"
-// @Success 200 {object} inventory.Inventory
-// @Failure 404 {object} handlers.ErrorResponse "Not found"
-// @Router /public/store/{adminSlug}/product/{productSlug} [get]
-func (h *InventoryHandler) GetPublicProductPage(w http.ResponseWriter, r *http.Request) {
-	adminSlug := chi.URLParam(r, "adminSlug")
-	productSlug := chi.URLParam(r, "productSlug")
-
-	product, err := h.UC.Inventories.UseCase.GetBySlugs(r.Context(), adminSlug, productSlug)
-	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "Product not found", err)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(product)
-}
-
-// @Summary View public store page
-// @Description View all public products for an admin store by slug
-// @Tags public
-// @Produce json
-// @Param adminSlug path string true "Admin Slug"
-// @Success 200 {object} inventory.StorePublicView
-// @Failure 404 {object} handlers.ErrorResponse "Not found"
-// @Router /public/store/{adminSlug} [get]
-func (h *InventoryHandler) GetAdminStorePage(w http.ResponseWriter, r *http.Request) {
-	adminSlug := chi.URLParam(r, "adminSlug")
-
-	storeView, err := h.UC.Inventories.UseCase.GetStorePublicView(r.Context(), adminSlug)
-	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "Store not found", err)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(storeView)
 }
 
 // DeleteInventory godoc

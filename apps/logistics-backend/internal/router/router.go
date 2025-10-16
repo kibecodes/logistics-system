@@ -54,9 +54,8 @@ func NewRouter(
 			r.Post("/login", u.LoginUser)
 
 			// Public store pages
-			r.Route("/store", func(r chi.Router) {
-				r.Get("/{adminSlug}/product/{productSlug}", i.GetPublicProductPage)
-				r.Get("/{adminSlug}", i.GetAdminStorePage)
+			r.Route("/stores", func(r chi.Router) {
+				r.Get("/public", s.GetPublicStores)
 			})
 		})
 
@@ -98,10 +97,11 @@ func NewRouter(
 			r.Route("/inventories", func(r chi.Router) {
 				r.Post("/create", i.CreateInventory)
 				r.Get("/by-name", i.GetByInventoryName)
-				r.Get("/by-id/{id}", i.GetByInventoryID)
 				r.Get("/all_inventories", i.ListInventories)
 				r.Get("/by-category", i.GetInventoryByCategory)
 				r.Get("/categories", i.ListCategories)
+				r.Get("/by-id/{id}", i.GetByInventoryID)
+				r.Get("/by-store/{id}", i.GetInventoryByStore)
 				r.Delete("/{id}", i.DeleteInventory)
 			})
 
